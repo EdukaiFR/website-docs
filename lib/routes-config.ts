@@ -50,7 +50,10 @@ export const ROUTES: EachRoute[] = [
     title: "Getting Started",
     href: "/getting-started",
     noLink: true,
-    items: [{ title: "Introduction", href: "/introduction" }],
+    items: [
+      { title: "Introduction", href: "/introduction" },
+      { title: "Installation", href: "/installation" },
+    ],
   },
 ];
 

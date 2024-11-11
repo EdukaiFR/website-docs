@@ -1,68 +1,71 @@
----
-title: Installation
-description: Installation guide for our application.
----
+# Installation
 
-Setting up AriaDocs is straightforward, with options to clone the repository or use the convenient `npx` command. AriaDocs requires [Node.js](https://nodejs.org/) version 18 or higher for optimal performance.
+This section covers the steps to set up the Edukai Website project on your local environment. Follow the instructions below to get started.
 
-## Clone Repository
-To get started, you can clone the AriaDocs repository directly from GitHub. 
-<Stepper>
-  <StepperItem title="Step 1: Clone the AriaDocs Repository">
-    Begin by cloning the AriaDocs repository from GitHub:
+## Prerequisites
 
-    ```bash
-    git clone https://github.com/nisabmohd/Aria-Docs.git
-    ```
-  </StepperItem>
+Before installing, ensure you have the following tools installed:
 
-  <StepperItem title="Step 2: Access the Project Directory">
-    After cloning, navigate into the project directory to start setting up:
+- **Node.js** (v16 or later)
+- **Git** (latest version)
 
-    ```bash
-    cd Aria-Docs
-    ```
-  </StepperItem>
+## Steps
 
-  <StepperItem title="Step 3: Install Required Dependencies">
-    Install all necessary project dependencies with npm:
+### 1. Clone the Repository
 
-    ```bash
-    npm install
-    ```
-  </StepperItem>
-
-  <StepperItem title="Step 4: Launch the Development Server">
-    Finally, start the development server to view the project locally:
-
-    ```bash
-    npm run dev
-    ```
-  </StepperItem>
-</Stepper>
-
-## Quick Setup with npx
-
-For a faster setup, use the `npx` command to create a new AriaDocs project in one step:
+Start by cloning the repository from GitHub:
 
 ```bash
-npx create-aria-doc <project-directory>
+git clone https://github.com/EdukaiFR/website.git
+cd website
 ```
 
-**Command Output:**
+### 2. Install Dependencies
+
+After navigating to the project directory, install the necessary dependencies using your package manager:
 
 ```bash
-Creating a new AriaDocs project in /path/to/your/project from the master branch...
-Cloning Master (Full Documentation)...
-AriaDocs project successfully created in /path/to/your/project!
+# Using npm
+npm install
 
-Next steps:
-1. Navigate to your project directory:
-   cd <project-directory>
-2. Install dependencies:
-   npm install
-3. Start the development server:
-   npm run dev
+# Using pnpm
+pnpm install
+
+# Using yarn
+yarn install
 ```
 
-With this setup, you’ll have a ready-to-use AriaDocs instance to start building your documentation.
+### 3. Set Up Environment Variables
+
+Create a `.env.local` file in the root directory, based on the `.env.example` file provided in the repository. This file contains essential environment variables, such as API keys and authentication credentials.
+
+```bash
+cp .env.example .env.local
+```
+
+Then, open `.env.local` and replace placeholder values with actual configurations for your local setup.
+
+### 4. Start the Development Server
+
+Once the dependencies are installed and environment variables are configured, start the development server:
+
+```bash
+# Using npm
+npm run dev
+
+# Using pnpm
+pnpm dev
+
+# Using yarn
+yarn dev
+```
+
+The project will be accessible at `http://localhost:3000` by default.
+
+### Additional Notes
+
+- **Build for Production**: To create an optimized production build, run npm run build, yarn build, or pnpm build.
+- **Testing the Installation**: Ensure the server is running smoothly by navigating to the URL provided. Verify functionality to confirm installation success.
+- **Support**: For any issues, consult the Issues section of the repository or contact a team member.
+
+Following these steps should successfully set up the Edukai Website on your local machine!
