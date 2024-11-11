@@ -1,0 +1,50 @@
+# Understanding the Architecture
+
+The Edukai website is designed with a modern tech stack aimed at delivering a fast, scalable, and maintainable application. This section provides an overview of the core architectural components to help developers understand how the project is structured and how its components interact.
+
+## Core Components
+
+### 1. **Next.js for Frontend**
+
+Edukai’s frontend is built using [Next.js](https://nextjs.org/), a powerful React framework for developing web applications with optimized performance and SEO capabilities. Next.js offers key features such as:
+
+- **File-based routing**: Simplifies route management.
+- **Static generation and server-side rendering**: Enables performance optimization.
+- **API routes**: Allows backend functions to be hosted alongside frontend components.
+
+> **Note**: For more information on creating pages or API routes with Next.js, refer to the relevant sections of this documentation.
+
+### 2. **Node.js for Backend (in progress)**
+
+The backend for Edukai is built on [Node.js](https://nodejs.org/), providing a JavaScript runtime environment that powers API interactions and server logic. The backend handles tasks such as data processing and integration with external services. Although the backend is still under development, it will be instrumental in managing and processing user data securely.
+
+### 3. **Data Management (in progress)**
+
+Our data management approach is currently in development. It will include:
+
+- **Data Storage**: Planning to incorporate either a database or a CMS solution.
+- **State Management**: Local state is managed within components using React hooks, but we may expand this with a global state solution if the project scales further.
+
+### 4. **ShadCN UI for Component Styling**
+
+The project leverages [ShadCN UI](https://shadcn.dev/) for a customizable, component-driven UI. ShadCN UI allows Edukai to maintain a cohesive look and feel throughout the application, offering:
+
+- **Reusable Components**: Building blocks for consistent design.
+- **Theming Support**: Allows for easy customization of color schemes and themes across the site.
+
+Developers can refer to the ShadCN UI documentation for styling conventions and details on component usage.
+
+### 5. **Hosting with Vercel**
+
+Edukai is hosted on [Vercel](https://vercel.com/), which seamlessly integrates with Next.js, providing:
+
+- **Automated Deployments**: Any changes to the main GitHub branch trigger a deployment.
+- **Scalability**: Vercel’s global CDN ensures low latency.
+- **Environment Management**: Manages environment variables, ensuring secure deployment settings.
+
+> For details on setting up a local environment and configuring deployments, see
+> the **Installation** and **Deployment** sections.
+
+## Summary
+
+This architecture allows Edukai to deliver a performant, user-friendly experience that is easy to maintain and scale. Each part of the stack plays a specific role in enhancing the functionality, design, and reliability of the application.
