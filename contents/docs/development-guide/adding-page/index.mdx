@@ -1,0 +1,26 @@
+# Adding Pages
+
+## How to Create New Pages in Next.js
+
+To create a new page in Next.js, add a `.tsx` file under the `app` directory. The `.tsx` extension allows you to write TypeScript code, providing type-checking benefits in addition to JSX for rendering React components. Each folder inside the `app` directory represents a route.
+
+For example, `app/blog/route.tsx` will automatically create an `/blog` route.
+
+## Best Practices for Organizing Pages and Routes
+
+1. **Folder Structure**
+   Group related pages within folders. This helps to keep your project organized and makes routes easier to find. For example, if you have multiple blog-related pages, put them in an `app/blog` folder.
+
+2. **Dynamic Routes**
+   Use dynamic routes for pages that require parameters, like an ID. For instance, a file named `[id].tsx` inside the `app/blog` folder creates a route accessible by `/blog/{id}`, where `{id}` is dynamic. This approach is ideal for detail pages like user profiles or blog posts.
+
+3. **Avoid Deep Nesting**
+   Keep folder structures shallow whenever possible. Deeply nested routes can make your codebase hard to navigate and slow down development. Consider whether each new folder level is necessary or if it could be combined with others.
+
+4. **Consistency in Naming**
+   Use consistent naming conventions across routes and pages. If you use lowercase names (e.g., `app/blog`), maintain this pattern across the app to avoid confusion.
+
+5. **Modularity**
+   If a page has multiple, reusable sections, consider breaking them into smaller components. Place these components in a `components` folder under the route’s directory (e.g., `app/blog/components`) to keep your code modular and reusable.
+
+Following these practices will help keep your Next.js project organized, scalable, and easy to maintain.

@@ -1,0 +1,153 @@
+# Setting Up API Routes
+
+## Creating Serverless API Routes in Next.js
+
+Next.js allows you to create serverless API routes easily by adding files to the `pages/api` directory (for older versions) or under the `app/api` folder when using the App Router. Each file in these directories corresponds to an endpoint.
+
+For example:
+
+- A file `app/api/hello.ts` creates an endpoint accessible at `/api/hello`.
+
+API routes are ideal for handling requests such as form submissions, fetching data, or interacting with external APIs, all within the Next.js app. Below is an example of a custom API route using Nodemailer to send emails.
+
+### Example: Sending Email Using `nodemailer`
+
+Here’s an example API route (`app/api/sendMail/route.ts`) to handle email sending. This API takes form input from a request body, such as sender email, name, and message content, and sends it using Gmail’s SMTP server. This example uses `nodemailer` for handling email transport.
+
+```typescript
+// app/api/sendMail/route.ts
+
+import { NextRequest } from "next/server";
+import nodemailer from "nodemailer";
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.MailAdress, // Sender email address
+    pass: process.env.MailPassword, // Password from environment variables for security
+  },
+});
+
+export async function POST(req: NextRequest) {
+  const res = await req.json(); // Parsing JSON body data
+
+  try {
+    await transporter.sendMail({
+      from: res.email,
+      to: "tristan.hourtoulle@epitech.eu",
+      subject: `New message from ${res.name}: ${res.subject}`,
+      text: res.message,
+      html: `<p>${res.message}</p>`,
+    });
+
+    return Response.json(
+      { success: true, message: "Email sent successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return Response.json(
+      { success: false, message: "Failed to send email" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Explanation
+
+1. **Import and Configure `nodemailer`**
+   `nodemailer` is used to handle email sending. The configuration includes setting up an SMTP transporter using Gmail’s SMTP server and credentials stored in environment variables.
+
+2. **Extract Request Data**
+   The `POST` method reads data from the request body, which is expected to be JSON containing fields like `email`, `name`, `subject`, and `message`.
+
+3. **Sending the Email**
+   `transporter.sendMail` sends the email with the received details. The email is sent to a specific address `(tristan.hourtoulle@epitech.eu)` and includes the sender’s name, subject, and message.
+
+4. **Error Handling**
+   If the email fails to send, the API logs the error and returns a `500` status with an error message. Otherwise, it returns a success response with a `200` status.
+
+### Secure API Handling and Error Management
+
+Securing and properly managing API routes is essential for protecting data and ensuring reliable application behavior.
+
+### Best Practices for Secure and Reliable API Routes
+
+1. **Environment Variables for Sensitive Data**
+   Store sensitive information, like email addresses and passwords, in environment variables (e.g., `.env.local` file) instead of hardcoding them. In the above example, `process.env.MailAdress` and `process.env.MailPassword` are used to keep email credentials secure.
+
+2. **Validate Input Data**
+   Always validate incoming data to protect your API from invalid or malicious data. For instance, before sending the email, you might check that the `email`, `name`, `subject`, and `message` fields are correctly formatted and not empty.
+
+Example validation:
+
+Example validation:
+
+```typescript
+if (!res.email || !res.message || !res.name || !res.subject) {
+  return Response.json(
+    { success: false, message: "Required fields are missing" },
+    { status: 400 }
+  );
+}
+```
+
+3. **Error Handling**
+   Handle errors gracefully by catching them and returning meaningful messages. This helps in debugging and improves the user experience by informing users when something goes wrong. Use `try...catch` blocks around asynchronous operations like `sendMail` to capture and log any errors.
+
+4. **Rate Limiting and Throttling**
+   To prevent abuse, consider implementing rate limiting on your API routes, especially for sensitive endpoints like email sending. Libraries like `express-rate-limit` can help with rate limiting in a Node.js environment, or you can use middleware solutions that integrate with Next.js.
+
+5. **Use Secure Headers**
+   Apply security headers like `Content-Security-Policy`, `X-Content-Type-Options`, and `X-Frame-Option`s to protect your API routes from common attacks, such as XSS and clickjacking. Next.js provides some of these by default, but they can be customized in your configuration.
+
+6. **Logging and Monitoring**
+   Implement logging for important actions, especially for error cases. This helps in identifying issues quickly in production environments.
+
+### Example Enhanced Error Handling
+
+Here’s how we might add extra validation to the email API route to check for required fields and add more detailed error responses.
+
+```typescript
+export async function POST(req: NextRequest) {
+  const res = await req.json();
+
+  // Input validation
+  if (!res.email || !res.message || !res.name || !res.subject) {
+    return Response.json(
+      { success: false, message: "Please provide all required fields." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await transporter.sendMail({
+      from: res.email,
+      to: "tristan.hourtoulle@epitech.eu",
+      subject: `New message from ${res.name}: ${res.subject}`,
+      text: res.message,
+      html: `<p>${res.message}</p>`,
+    });
+
+    return Response.json(
+      { success: true, message: "Email sent successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error sending email:", error);
+    if (error instanceof SomeSpecificError) {
+      return Response.json(
+        { success: false, message: "Detailed error message for the user." },
+        { status: 500 }
+      );
+    }
+    return Response.json(
+      { success: false, message: "Failed to send email" },
+      { status: 500 }
+    );
+  }
+}
+```

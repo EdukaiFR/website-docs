@@ -1,0 +1,23 @@
+# Configuring SEO and Meta Data
+
+## Best Practices for SEO
+
+- Use unique and descriptive titles for each page.
+- Use the `Head` component from Next.js to set metadata.
+
+## Setting Up Meta Tags
+
+```javascript
+import Head from "next/head";
+
+export default function AboutPage() {
+  return (
+    <>
+      <Head>
+        <title>About Us - Edukai</title>
+        <meta name="description" content="Learn more about Edukai" />
+      </Head>
+    </>
+  );
+}
+```
