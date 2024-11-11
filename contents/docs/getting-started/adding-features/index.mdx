@@ -1,0 +1,84 @@
+# Adding Features
+
+This guide walks you through the process of adding new features to the Edukai Website project. It covers best practices, coding standards, and essential steps for implementing and documenting new functionality.
+
+## Prerequisites
+
+Before adding a new feature, make sure:
+
+- You have a clear understanding of the feature requirements.
+- You’ve discussed or reviewed the feature with the team if necessary.
+- You’ve set up your local development environment as described in the [Installation](./installation.mdx) guide.
+
+## Steps for Adding a New Feature
+
+### 1. Create a New Branch
+
+To keep the codebase clean and organized, always start by creating a new branch for each feature:
+
+```bash
+git checkout -b feature/your-feature-name
+```
+
+Tip: Use descriptive branch names like `feature/user-auth` or `feature/improved-dashboard`.
+
+### 2. Develop the Feature
+
+Implement the feature following the project’s coding standards. Here are a few guidelines:
+
+- **Components**: If you need to add or modify a UI component, check our component library first to see if one exists that can be customized. If not, create a new component in the components directory.
+- **APIs**: For features requiring backend interactions, add or modify API routes in the pages/api directory. Follow the structure and conventions used in existing routes.
+
+### 3. Add Documentation
+
+For every new feature, update the documentation within this repository and ensure it includes:
+
+- **Feature Overview**: A brief description of the feature’s purpose.
+- **Setup Instructions**: Any steps required to configure or enable the feature.
+- **Usage Examples**: Code examples or screenshots to demonstrate how the feature works.
+
+Example of Documentation Structure:
+
+```md
+# Feature Name
+
+## Overview
+
+A short description of what this feature does.
+
+## Setup
+
+Instructions on configuring or enabling the feature.
+
+## Usage
+
+Examples or code snippets showing how to use the feature.
+```
+
+### 4. Test the Feature
+
+Before submitting a pull request, thoroughly test the feature to ensure it:
+
+- Works as expected across different scenarios.
+- Integrates smoothly with existing functionality.
+- Adheres to performance and accessibility standards.
+
+### 5. Submit a Pull Request
+
+Once the feature is complete and tested, push your branch and create a pull request (PR) for review:
+
+```bash
+git add .
+git commit -m "Add feature: [your feature name]"
+git push origin feature/your-feature-name
+```
+
+Go to GitHub and open a new PR, providing a description of the changes. Tag relevant team members for review and address any feedback promptly.
+
+## Additional Notes
+
+- **Code Consistency**: Follow our code style guidelines, and make use of any linters or formatters set up in the project.
+- **Feature Flags**: If the feature is experimental, consider using feature flags to control its release.
+- **Post-Deployment**: After deploying, monitor the feature for any unexpected issues, and update documentation if needed.
+
+Adding features with a structured approach will ensure a smooth integration process and help keep the Edukai Website maintainable and scalable.
