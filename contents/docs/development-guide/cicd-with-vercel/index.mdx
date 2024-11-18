@@ -1,12 +1,196 @@
 # Setting Up CI/CD with Vercel
 
-## Automating Deployments
+## Introduction
 
-1. Link your GitHub repo to Vercel.
-2. Vercel automatically deploys each push to the main branch.
-
-## Configuring CI/CD Workflows
-
-Configure branch rules in GitHub to restrict merging and ensure code quality.
+Continuous Integration (CI) and Continuous Deployment (CD) are essential practices in modern web development. With **Vercel**, you can easily set up CI/CD pipelines for your **Next.js**, **TailwindCSS**, and **TypeScript** project. Vercel provides seamless integration with Git repositories, automatic builds, and deployments on every commit.
 
 ---
+
+## Why Use Vercel for CI/CD?
+
+1. **Ease of Use**: Vercel automates deployments with minimal configuration.
+2. **Built-in Features**: Supports custom domains, performance monitoring, and serverless functions.
+3. **Integration with Git**: Automatically builds and deploys your project on every push to a Git branch.
+
+---
+
+## Prerequisites
+
+1. A Vercel account ([Sign up here](https://vercel.com/)).
+2. A Git repository for your project (GitHub, GitLab, or Bitbucket).
+3. A completed **Next.js** project.
+
+---
+
+## Setting Up Vercel
+
+### Step 1: Install Vercel CLI (Optional)
+
+You can manage your projects using the Vercel CLI.
+
+```bash
+npm install -g vercel
+```
+
+Login to your Vercel account:
+
+```bash
+vercel login
+```
+
+### Step 2: Deploy Your Project
+
+1. Navigate to the Vercel dashboard ([https://vercel.com/dashboard](https://vercel.com/dashboard)).
+2. Click **"New Project"** and select your Git repository.
+3. Configure the project settings:
+   - Framework: **Next.js**
+   - Environment Variables: Add any required variables (e.g., `NEXT_PUBLIC_API_URL`).
+4. Click **Deploy** to initiate the first build and deployment.
+
+---
+
+## CI/CD Workflow
+
+### Automatic Deployments
+
+Once your Vercel project is connected to a Git repository:
+
+- **Pushing to `main`**: Automatically triggers a production deployment.
+- **Pushing to other branches**: Creates preview deployments for testing.
+
+---
+
+## Environment Variables
+
+Add environment variables in the Vercel dashboard under **Settings > Environment Variables**.
+
+**Example:**
+
+| Key                     | Value                     | Environment |
+| ----------------------- | ------------------------- | ----------- |
+| `NEXT_PUBLIC_API_URL`   | `https://api.example.com` | Production  |
+| `NEXT_PUBLIC_ANALYTICS` | `UA-12345678-1`           | Preview     |
+
+---
+
+## Custom Domains
+
+Set up a custom domain for your project:
+
+1. Go to **Settings > Domains** in the Vercel dashboard.
+2. Add your domain (e.g., `www.example.com`).
+3. Update your DNS settings with the records provided by Vercel.
+
+---
+
+## Managing Builds
+
+### Ignoring Builds
+
+Prevent Vercel from building certain commits by adding `[skip ci]` to your commit message:
+
+```bash
+git commit -m "Update README [skip ci]"
+```
+
+### Custom Build Commands
+
+You can define custom build commands in the **Build & Development Settings** in the Vercel dashboard.
+
+**Default Commands for Next.js:**
+
+- Install: `npm install`
+- Build: `npm run build`
+
+---
+
+## Rollbacks
+
+If a deployment introduces an issue, you can rollback to a previous version:
+
+1. Go to the **Deployments** tab in the Vercel dashboard.
+2. Select a previous deployment and click **Restore**.
+
+---
+
+## Advanced Configuration
+
+### Using a Monorepo
+
+Vercel supports monorepos out of the box. Define the project root in **Settings > Build & Development**.
+
+**Example:**
+
+| Key            | Value           |
+| -------------- | --------------- |
+| Root Directory | `apps/frontend` |
+
+### Serverless Functions
+
+Deploy API routes as serverless functions in the `/api` directory of your Next.js project.
+
+**Example:**
+
+```typescript
+export default function handler(req, res) {
+  res.status(200).json({ message: "Hello, world!" });
+}
+```
+
+---
+
+## Monitoring and Analytics
+
+### Deployment Analytics
+
+View build and deployment analytics in the Vercel dashboard to monitor performance, build times, and errors.
+
+### Web Vitals Monitoring
+
+Enable Web Vitals monitoring in **Settings > Analytics** to track metrics like:
+
+- Largest Contentful Paint (LCP)
+- First Input Delay (FID)
+- Cumulative Layout Shift (CLS)
+
+---
+
+## Using Vercel CLI for Deployments
+
+### Deploy the Project
+
+Deploy manually using the Vercel CLI:
+
+```bash
+vercel
+```
+
+### Set a Production Deployment
+
+To deploy to production:
+
+```bash
+vercel --prod
+```
+
+### Link a Project
+
+Link your local project to a Vercel project:
+
+```bash
+vercel link
+```
+
+---
+
+## Best Practices
+
+1. **Use Preview Deployments**: Test features on preview URLs before merging to `main`.
+2. **Monitor Builds**: Regularly check build times and optimize dependencies.
+3. **Secure Environment Variables**: Never hardcode sensitive information in your codebase.
+
+---
+
+## Conclusion
+
+Vercel simplifies the CI/CD workflow for your Next.js project, enabling fast and reliable deployments. By following these steps and leveraging Vercel’s powerful features, you can streamline your development and deployment processes. Happy coding!
