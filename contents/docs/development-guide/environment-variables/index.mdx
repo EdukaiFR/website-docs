@@ -1,12 +1,141 @@
 # Working with Environment Variables
 
-## Setting Up Environment Variables
+## Introduction
 
-Environment variables can be stored in a `.env.local` file. Define each variable with `NEXT_PUBLIC` prefix for client-side usage.
-
-## Ensuring Security with Sensitive Data
-
-- Never commit `.env.local` to the repository.
-- Use Vercel to set production environment variables.
+Environment variables are essential for configuring and securing sensitive parameters in a project. They allow you to store information such as API keys, backend service URLs, or other dynamic configurations outside of the source code. In this document, we explain how to manage environment variables in this project, built with **Next.js**, **TailwindCSS**, and **TypeScript**.
 
 ---
+
+## Configuring Environment Variables
+
+### Structure of the `.env` File
+
+Environment files are used to define variables. In Next.js, a file named `.env.local` is used to store variables specific to each environment.
+
+**Example:**
+
+```bash
+NEXT_PUBLIC_API_URL=https://api.example.com
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+```
+
+### Best Practices
+
+1. **Prefix `NEXT_PUBLIC_`**
+   All environment variables used in client-side (frontend) code must start with `NEXT_PUBLIC_`. This allows Next.js to distinguish between variables accessible in the browser and those that must remain server-side.
+
+2. **Protect Sensitive Information**
+   Sensitive variables such as passwords or private keys should only be used on the server-side and **must not** be prefixed with `NEXT_PUBLIC_`.
+
+3. **Do Not Version Control Environment Files**
+   Add the `.env.local` file to `.gitignore` to prevent sensitive information from being committed to the Git repository.
+
+**Example of a `.gitignore` entry:**
+
+```gitignore
+.env.local
+```
+
+---
+
+## Using Environment Variables in Code
+
+### Accessing Environment Variables
+
+To use an environment variable in TypeScript code, use `process.env`. For example:
+
+```typescript
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+if (!apiUrl) {
+  throw new Error("The NEXT_PUBLIC_API_URL variable is not defined.");
+}
+
+console.log("API URL:", apiUrl);
+```
+
+### Typing Environment Variables
+
+To ensure environment variables are correctly typed and defined, add a TypeScript declaration in the `env.d.ts` file at the root of your project.
+
+**Example:**
+
+```typescript
+declare namespace NodeJS {
+  interface ProcessEnv {
+    NEXT_PUBLIC_API_URL: string;
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: string;
+  }
+}
+```
+
+This prevents errors caused by typos or missing variables.
+
+---
+
+## Automatic Loading
+
+Next.js automatically loads the following files in this order:
+
+1. `.env.local`
+2. `.env.[mode]` (`.env.development`, `.env.production`, etc.)
+3. `.env`
+
+You can define specific configurations depending on the deployment environment.
+
+**Example:**
+
+- `.env.local` (for local variables)
+- `.env.production` (for production variables)
+
+---
+
+## Practical Example
+
+### `.env.local` File
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_ANALYTICS_KEY=abc123
+```
+
+### `pages/index.tsx` File
+
+```typescript
+export default function HomePage() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const analyticsKey = process.env.NEXT_PUBLIC_ANALYTICS_KEY;
+
+  return (
+    <div>
+      <h1>Welcome to the Project</h1>
+      <p>API URL: {apiUrl}</p>
+      <p>Analytics Key: {analyticsKey}</p>
+    </div>
+  );
+}
+```
+
+---
+
+## Common Errors and Resolutions
+
+1. **Undefined Variable**  
+   If an environment variable is not defined, it may cause an error. Ensure the variable is declared in your `.env.local` file.
+
+2. **Accessing a Non-Prefixed Variable**  
+   An environment variable without the `NEXT_PUBLIC_` prefix will not be accessible in the frontend code.
+
+3. **Rebuild Required**  
+   Any modification to the `.env.local` file requires restarting the development server for the changes to take effect.
+
+---
+
+## Recommended Tools
+
+- **dotenv-cli**: For loading and testing environment variables from the command line.
+- **cross-env**: For defining variables in npm scripts.
+
+---
+
+With this information, you are ready to efficiently manage environment variables in your Next.js project! If you have any questions or suggestions, feel free to contribute to this document.
