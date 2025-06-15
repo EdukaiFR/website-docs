@@ -1,0 +1,862 @@
+# Authentication Services 🔗
+
+## Overview
+
+The **Edukai Authentication Services** provide a comprehensive API service layer for frontend-backend communication. The service layer handles all authentication operations including login, registration, logout, and token management with proper error handling and TypeScript safety.
+
+## Service Architecture
+
+### 🏗️ **Service Layer Structure**
+
+```
+Authentication Service Layer
+┌─────────────────────────────────────────────────────────────┐
+│                    Service Layer                            │
+├─────────────────────────────────────────────────────────────┤
+│  AuthService    │  Server Actions │  Utility Functions     │
+│  ─────────────  │  ─────────────  │  ─────────────────────  │
+│  • useAuthService│  • signinAction │  • getAuthToken       │
+│  • API Methods  │  • signupAction │  • getCurrentUser     │
+│  • Error Handle │  • signoutAction│  • isAuthenticated    │
+│  • Type Safety  │  • Form Actions │  • getAuthHeaders     │
+├─────────────────────────────────────────────────────────────┤
+│                    Backend Integration                      │
+│  • RESTful API endpoints (/auth/*)                         │
+│  • JWT token-based authentication                          │
+│  • Error handling and translation                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 📁 **Service Files Structure**
+
+```
+Authentication Services (5 files, ~442 lines)
+├── 📁 services/
+│   └── auth.ts                    # Main auth service (100 lines)
+├── 📁 lib/
+│   ├── actions/auth.ts            # Server actions (159 lines)
+│   └── auth-utils.ts              # Utility functions (38 lines)
+└── 📁 hooks/
+    └── useSession.ts              # Session hook with service integration (117 lines)
+```
+
+---
+
+## Core Auth Service
+
+### 🔗 **useAuthService Hook**
+
+**File**: `services/auth.ts` (100 lines)
+
+The main authentication service that handles all API communication with the backend.
+
+#### **Service Interface**
+
+```typescript
+export interface AuthService {
+  login: (credentials: LoginCredentials) => Promise<AuthResponse>;
+  register: (userData: RegisterData) => Promise<AuthResponse>;
+  logout: () => Promise<void>;
+  refreshToken: () => Promise<{ token: string }>;
+}
+
+export function useAuthService(): AuthService {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    console.error(
+      "❌ NEXT_PUBLIC_API_URL n'est pas défini ! Veuillez l'ajouter à votre fichier .env.local"
+    );
+  }
+
+  return {
+    login,
+    register,
+    logout,
+    refreshToken,
+  };
+}
+```
+
+#### **Type Definitions**
+
+```typescript
+// Login credentials interface
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+// Registration data interface
+export interface RegisterData {
+  username: string;
+  password: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+// Authentication response interface
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+```
+
+#### **Login Method**
+
+```typescript
+const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  try {
+    const response = await axios.post(`${apiUrl}/auth/login`, credentials, {
+      withCredentials: true, // Include cookies for CSRF protection
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error(
+      "Erreur de connexion:",
+      error.response?.data?.message || error.message
+    );
+    throw error;
+  }
+};
+```
+
+**Features**:
+
+- **CSRF Protection**: `withCredentials: true` for cookie-based CSRF tokens
+- **Error Handling**: Comprehensive error logging and re-throwing
+- **Type Safety**: Full TypeScript interface compliance
+- **Environment Configuration**: Dynamic API URL from environment variables
+
+#### **Registration Method**
+
+```typescript
+const register = async (userData: RegisterData): Promise<AuthResponse> => {
+  try {
+    const response = await axios.post(`${apiUrl}/auth/register`, userData, {
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Erreur d'inscription:", error);
+    throw error;
+  }
+};
+```
+
+**Features**:
+
+- **Flexible Registration**: Optional fields for email, firstName, lastName
+- **Consistent API Pattern**: Same structure as login method
+- **Error Logging**: French localized error messages
+- **Security**: Same CSRF protection as login
+
+#### **Logout Method**
+
+```typescript
+const logout = async (): Promise<void> => {
+  try {
+    console.log("Déconnexion...");
+    // Note: Actual logout implementation would make API call
+    // await axios.post(`${apiUrl}/auth/logout`, {}, { withCredentials: true });
+  } catch (error) {
+    console.error("Erreur de déconnexion:", error);
+    throw error;
+  }
+};
+```
+
+#### **Token Refresh Method**
+
+```typescript
+const refreshToken = async (): Promise<{ token: string }> => {
+  try {
+    const response = await axios.post(
+      `${apiUrl}/auth/refresh`,
+      {},
+      {
+        withCredentials: true,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Erreur de renouvellement du token:", error);
+    throw error;
+  }
+};
+```
+
+**Features**:
+
+- **Automatic Token Refresh**: Maintains session without user intervention
+- **Session Persistence**: Extends user sessions seamlessly
+- **Error Recovery**: Handles token refresh failures gracefully
+
+---
+
+## Server Actions
+
+### ⚙️ **Authentication Actions**
+
+**File**: `lib/actions/auth.ts` (159 lines)
+
+Server actions that integrate the auth service with form handling and provide a higher-level API for components.
+
+#### **Action Response Interface**
+
+```typescript
+export interface AuthResponse {
+  success: boolean;
+  error?: string;
+  data?: unknown;
+}
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+```
+
+#### **Signin Action**
+
+```typescript
+export async function signinAction(
+  credentials: SigninFormValues
+): Promise<AuthResponse> {
+  const authService = useAuthService();
+
+  try {
+    console.log("🔐 [Auth Action] Attempting signin for:", credentials.email);
+
+    // Convert form values to service format
+    const loginCredentials: LoginCredentials = {
+      username: credentials.email,
+      password: credentials.password,
+    };
+
+    const response = await authService.login(loginCredentials);
+
+    // Store session data
+    sessionStorage.setToken(response.token);
+    sessionStorage.setUser(response.user);
+
+    console.log("✅ [Auth Action] Signin successful");
+    return { success: true, data: response };
+  } catch (error: any) {
+    console.error("❌ [Auth Action] Signin failed:", error.message);
+    const errorMessage = translateApiError(
+      error.response?.data?.message || error.message
+    );
+    return { success: false, error: errorMessage };
+  }
+}
+```
+
+**Features**:
+
+- **Form Integration**: Converts form values to service format
+- **Session Management**: Automatic token and user storage
+- **Error Translation**: French localized error messages
+- **Logging**: Comprehensive debug logging with emojis
+- **Type Safety**: Full TypeScript compliance
+
+#### **Signup Action**
+
+```typescript
+export async function signupAction(
+  userData: SignupFormValues
+): Promise<AuthResponse> {
+  const authService = useAuthService();
+
+  try {
+    console.log("📝 [Auth Action] Attempting signup for:", userData.email);
+
+    // Convert form values to service format
+    const registerData: RegisterData = {
+      username: userData.email,
+      password: userData.password,
+      email: userData.email,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+    };
+
+    const response = await authService.register(registerData);
+
+    // Store session data
+    sessionStorage.setToken(response.token);
+    sessionStorage.setUser(response.user);
+
+    console.log("✅ [Auth Action] Signup successful");
+    return { success: true, data: response };
+  } catch (error: any) {
+    console.error("❌ [Auth Action] Signup failed:", error.message);
+    const errorMessage = translateApiError(
+      error.response?.data?.message || error.message
+    );
+    return { success: false, error: errorMessage };
+  }
+}
+```
+
+#### **Signout Action**
+
+```typescript
+export async function signoutAction(): Promise<AuthResponse> {
+  try {
+    console.log("🚪 [Auth Action] Attempting signout");
+
+    // Clear local session first
+    sessionStorage.clearSession();
+
+    // Note: Would call authService.logout() in full implementation
+
+    console.log("✅ [Auth Action] Signout successful");
+    return { success: true };
+  } catch (error: any) {
+    console.error("❌ [Auth Action] Signout failed:", error.message);
+
+    // Even if server logout fails, clear local session
+    sessionStorage.clearSession();
+
+    return {
+      success: false,
+      error: "Erreur lors de la déconnexion",
+    };
+  }
+}
+```
+
+---
+
+## Utility Functions
+
+### 🛠️ **Auth Utilities**
+
+**File**: `lib/auth-utils.ts` (38 lines)
+
+Utility functions for authentication state management and token handling.
+
+#### **Token Management**
+
+```typescript
+export function getAuthToken() {
+  return sessionStorage.getToken();
+}
+
+/**
+ * Get authorization headers for API calls
+ * @returns Headers object with authorization token
+ */
+export function getAuthHeaders() {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+```
+
+#### **User Management**
+
+```typescript
+/**
+ * Get the current authenticated user from session storage
+ * @returns User object or null if not authenticated
+ */
+export function getCurrentUser() {
+  return sessionStorage.getUser();
+}
+
+/**
+ * Get the current user's ID from session storage
+ * @returns User ID string or null if not authenticated
+ */
+export function getCurrentUserId(): string | null {
+  const user = getCurrentUser();
+  console.log("🔍 [Auth Utils] Debug - Full user object:", user);
+
+  if (!user) {
+    return null;
+  }
+
+  const userId = user.id || user._id || user.userId;
+  console.log("🔍 [Auth Utils] Debug - Extracted userId:", userId);
+
+  return userId || null;
+}
+```
+
+#### **Authentication State**
+
+```typescript
+/**
+ * Check if user is authenticated
+ * @returns boolean indicating if user is logged in
+ */
+export function isAuthenticated(): boolean {
+  const token = sessionStorage.getToken();
+  const user = sessionStorage.getUser();
+  return !!(token && user);
+}
+```
+
+---
+
+## API Integration
+
+### 🌐 **Backend Communication**
+
+#### **API Endpoints**
+
+The service layer communicates with these backend endpoints:
+
+| Method | Endpoint         | Purpose             | Request Body       | Response            |
+| ------ | ---------------- | ------------------- | ------------------ | ------------------- |
+| POST   | `/auth/login`    | User authentication | `LoginCredentials` | `AuthResponse`      |
+| POST   | `/auth/register` | User registration   | `RegisterData`     | `AuthResponse`      |
+| POST   | `/auth/logout`   | Session termination | `{}`               | `void`              |
+| POST   | `/auth/refresh`  | Token refresh       | `{}`               | `{ token: string }` |
+
+#### **Request Configuration**
+
+All API requests use consistent configuration:
+
+```typescript
+const requestConfig = {
+  withCredentials: true, // Include cookies for CSRF protection
+  headers: {
+    "Content-Type": "application/json",
+    ...getAuthHeaders(), // Include auth token if available
+  },
+};
+```
+
+#### **Environment Configuration**
+
+```typescript
+// Environment variable validation
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+if (!apiUrl) {
+  console.error(
+    "❌ NEXT_PUBLIC_API_URL n'est pas défini ! Veuillez l'ajouter à votre fichier .env.local"
+  );
+}
+```
+
+**Required Environment Variables**:
+
+- `NEXT_PUBLIC_API_URL`: Backend API base URL
+
+---
+
+## Error Handling
+
+### 🚨 **Comprehensive Error Management**
+
+#### **Error Translation**
+
+**File**: `lib/toast.ts` - Error translation system
+
+```typescript
+export function translateApiError(error: string): string {
+  const translations = {
+    // Authentication errors
+    "Invalid credentials": "Identifiants invalides",
+    "User not found": "Utilisateur non trouvé",
+    "Authentication failed": "Échec de l'authentification",
+    "Email already exists": "Cette adresse email est déjà utilisée",
+    "Username already exists": "Ce nom d'utilisateur est déjà pris",
+    "Password too weak": "Mot de passe trop faible",
+    "Invalid email format": "Format d'email invalide",
+
+    // Network errors
+    "Network Error": "Erreur de connexion réseau",
+    "Request timeout": "Délai d'attente dépassé",
+    "Server error": "Erreur serveur",
+
+    // Session errors
+    "Session expired": "Session expirée",
+    "Token invalid": "Token invalide",
+    Unauthorized: "Non autorisé",
+  };
+
+  return translations[error] || error;
+}
+```
+
+#### **Error Handling Patterns**
+
+```typescript
+// Service-level error handling
+try {
+  const response = await authService.login(credentials);
+  return response.data;
+} catch (error: any) {
+  // Log error for debugging
+  console.error("Login error:", error.response?.data?.message || error.message);
+
+  // Re-throw for higher-level handling
+  throw error;
+}
+
+// Action-level error handling
+try {
+  const response = await authService.login(credentials);
+  return { success: true, data: response };
+} catch (error: any) {
+  const errorMessage = translateApiError(
+    error.response?.data?.message || error.message
+  );
+  return { success: false, error: errorMessage };
+}
+```
+
+#### **Toast Notifications**
+
+```typescript
+export const authToast = {
+  loginSuccess: () => showToast.success("Connexion réussie !"),
+  loginError: (error?: string) =>
+    showToast.error(error || "Erreur de connexion"),
+  registerSuccess: () => showToast.success("Inscription réussie !"),
+  registerError: (error?: string) =>
+    showToast.error(error || "Erreur d'inscription"),
+  logoutSuccess: () => showToast.success("Déconnexion réussie"),
+  logoutError: () => showToast.error("Erreur de déconnexion"),
+  sessionExpired: () => showToast.warning("Session expirée"),
+};
+```
+
+---
+
+## Service Integration
+
+### 🔌 **Hook Integration**
+
+#### **useSession Hook Integration**
+
+**File**: `hooks/useSession.ts` (117 lines)
+
+The useSession hook integrates the auth service with React state management:
+
+```typescript
+export function useSession() {
+  const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState(true);
+  const authService = useAuthService();
+
+  const login = async (credentials: LoginCredentials) => {
+    try {
+      const response = await authService.login(credentials);
+      sessionStorage.setToken(response.token);
+      sessionStorage.setUser(response.user);
+      setUser(response.user);
+      authToast.loginSuccess();
+      return { success: true, data: response };
+    } catch (error: any) {
+      const errorMessage = translateApiError(
+        error.response?.data?.message || error.message
+      );
+      authToast.loginError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const register = async (userData: RegisterData) => {
+    try {
+      const response = await authService.register(userData);
+      sessionStorage.setToken(response.token);
+      sessionStorage.setUser(response.user);
+      setUser(response.user);
+      authToast.registerSuccess();
+      return { success: true, data: response };
+    } catch (error: any) {
+      const errorMessage = translateApiError(
+        error.response?.data?.message || error.message
+      );
+      authToast.registerError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+      sessionStorage.clearSession();
+      setUser(null);
+      authToast.logoutSuccess();
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      authToast.logoutError();
+      // Clear local session even if server logout fails
+      sessionStorage.clearSession();
+      setUser(null);
+    }
+  };
+
+  return { user, loading, login, register, logout };
+}
+```
+
+#### **Service Usage in Other Services**
+
+The auth utilities are used throughout the application for authenticated API calls:
+
+```typescript
+// Course service using auth utilities
+import { getCurrentUserId } from "@/lib/auth-utils";
+
+export function useCourseService() {
+  const createCourse = async (courseData) => {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    const response = await axios.post("/api/courses", {
+      ...courseData,
+      userId,
+    });
+    return response.data;
+  };
+}
+
+// Quiz service using auth utilities
+import { getCurrentUserId } from "@/lib/auth-utils";
+
+export function useQuizService() {
+  const generateQuiz = async (quizData) => {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      console.error("❌ [Quiz Service] User not authenticated");
+      throw new Error("User not authenticated");
+    }
+
+    // Continue with authenticated request
+  };
+}
+```
+
+---
+
+## Testing Strategies
+
+### 🧪 **Service Testing**
+
+#### **Unit Tests**
+
+```typescript
+// Auth service tests
+describe("useAuthService", () => {
+  const mockAxios = axios as jest.Mocked<typeof axios>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should login successfully", async () => {
+    const mockResponse = {
+      data: {
+        token: "mock-token",
+        user: { id: "1", username: "test@example.com" },
+      },
+    };
+    mockAxios.post.mockResolvedValue(mockResponse);
+
+    const authService = useAuthService();
+    const result = await authService.login({
+      username: "test@example.com",
+      password: "password123",
+    });
+
+    expect(result).toEqual(mockResponse.data);
+    expect(mockAxios.post).toHaveBeenCalledWith(
+      expect.stringContaining("/auth/login"),
+      expect.any(Object),
+      { withCredentials: true }
+    );
+  });
+
+  it("should handle login errors", async () => {
+    const mockError = new Error("Invalid credentials");
+    mockAxios.post.mockRejectedValue(mockError);
+
+    const authService = useAuthService();
+
+    await expect(
+      authService.login({
+        username: "test@example.com",
+        password: "wrong-password",
+      })
+    ).rejects.toThrow("Invalid credentials");
+  });
+});
+```
+
+#### **Integration Tests**
+
+```typescript
+// Server action integration tests
+describe("Authentication Actions", () => {
+  it("should handle signin action successfully", async () => {
+    const mockAuthService = {
+      login: jest.fn().mockResolvedValue({
+        token: "mock-token",
+        user: { id: "1", username: "test@example.com" },
+      }),
+    };
+
+    const result = await signinAction({
+      email: "test@example.com",
+      password: "password123",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
+  });
+
+  it("should handle signin action errors", async () => {
+    const mockAuthService = {
+      login: jest.fn().mockRejectedValue(new Error("Invalid credentials")),
+    };
+
+    const result = await signinAction({
+      email: "test@example.com",
+      password: "wrong-password",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Identifiants invalides");
+  });
+});
+```
+
+#### **Mock Service**
+
+```typescript
+// Mock auth service for testing
+export const mockAuthService = {
+  login: jest.fn(),
+  register: jest.fn(),
+  logout: jest.fn(),
+  refreshToken: jest.fn(),
+};
+
+// Test utility for mocking useAuthService
+export const mockUseAuthService = (overrides = {}) => {
+  return {
+    ...mockAuthService,
+    ...overrides,
+  };
+};
+```
+
+---
+
+## Performance Considerations
+
+### ⚡ **Service Optimizations**
+
+#### **1. Request Caching**
+
+```typescript
+// Cache token refresh requests
+let refreshPromise: Promise<{ token: string }> | null = null;
+
+const refreshToken = async (): Promise<{ token: string }> => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = axios
+    .post(
+      `${apiUrl}/auth/refresh`,
+      {},
+      {
+        withCredentials: true,
+      }
+    )
+    .then((response) => response.data);
+
+  try {
+    const result = await refreshPromise;
+    refreshPromise = null;
+    return result;
+  } catch (error) {
+    refreshPromise = null;
+    throw error;
+  }
+};
+```
+
+#### **2. Request Deduplication**
+
+```typescript
+// Deduplicate concurrent login requests
+const pendingRequests = new Map();
+
+const login = async (credentials: LoginCredentials) => {
+  const key = `${credentials.username}:${credentials.password}`;
+
+  if (pendingRequests.has(key)) {
+    return pendingRequests.get(key);
+  }
+
+  const promise = axios
+    .post(`${apiUrl}/auth/login`, credentials, {
+      withCredentials: true,
+    })
+    .then((response) => response.data);
+
+  pendingRequests.set(key, promise);
+
+  try {
+    const result = await promise;
+    pendingRequests.delete(key);
+    return result;
+  } catch (error) {
+    pendingRequests.delete(key);
+    throw error;
+  }
+};
+```
+
+#### **3. Error Recovery**
+
+```typescript
+// Automatic retry for network errors
+const retryRequest = async (fn: () => Promise<any>, maxRetries = 3) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (i === maxRetries - 1 || !isRetryableError(error)) {
+        throw error;
+      }
+      await delay(1000 * Math.pow(2, i)); // Exponential backoff
+    }
+  }
+};
+
+const isRetryableError = (error: any) => {
+  return error.code === "NETWORK_ERROR" || error.response?.status >= 500;
+};
+```
+
+---
+
+**Navigation**:
+
+- 🏠 **[Authentication Overview](./overview.md)** - Complete authentication documentation
+- 🏗️ **[Architecture](./architecture.md)** - System architecture and design patterns
+- 🎨 **[Components](./components.md)** - Authentication UI components
+- 💾 **[Session Management](./session.md)** - Session and storage management
+- 🛡️ **[Security](./security.md)** - Security features and best practices

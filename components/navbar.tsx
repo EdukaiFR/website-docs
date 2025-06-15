@@ -15,15 +15,15 @@ export const NAVLINKS = [
   },
   {
     title: "Software",
-    href: "/docs${page_routes[0].href}",
+    href: "/docs/software",
   },
   {
     title: "Mobile",
-    href: "/docs${page_routes[0].href}",
+    href: "/docs/mobile",
   },
   {
     title: "Backend",
-    href: "/docs${page_routes[0].href}",
+    href: "/docs/backend",
   },
 ];
 

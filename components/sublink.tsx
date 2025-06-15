@@ -20,10 +20,14 @@ export default function SubLink({
   isSheet,
 }: EachRoute & { level: number; isSheet: boolean }) {
   const path = usePathname();
-  const [isOpen, setIsOpen] = useState(level == 0);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (path == href || path.includes(href)) setIsOpen(true);
+    if (path == href || path.includes(href)) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
   }, [href, path]);
 
   const Comp = (

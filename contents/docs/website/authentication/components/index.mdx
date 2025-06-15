@@ -1,0 +1,717 @@
+# Authentication Components 🎨
+
+## Overview
+
+The **Edukai Authentication Components** provide a complete set of UI components for user authentication, including forms, containers, guards, and pages. All components are built with React, TypeScript, and Tailwind CSS, following modern design patterns and accessibility standards.
+
+## Core Components
+
+### 🏗️ **AuthContainer Component**
+
+**File**: `components/auth/auth-container.tsx` (111 lines)
+
+The main authentication orchestrator that manages different auth modes and form transitions.
+
+#### **Interface & Props**
+
+```typescript
+export interface AuthContainerProps {
+  initialMode?: AuthMode; // 'login' | 'register' | 'forgot'
+  onAuthSuccess?: () => void; // Success callback
+  onAuthError?: (error: string) => void; // Error callback
+}
+
+export function AuthContainer({
+  initialMode = "login",
+  onAuthSuccess,
+  onAuthError,
+}: AuthContainerProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+  // Component implementation
+}
+```
+
+#### **Key Features**
+
+- **Mode Management**: Seamless switching between login, register, and forgot password
+- **Callback System**: Configurable success and error handling
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
+- **Form Integration**: Manages SigninForm, SignupForm, and ResetPasswordForm
+- **State Persistence**: Maintains form state during mode switches
+
+#### **Usage Examples**
+
+```typescript
+// Basic usage
+<AuthContainer
+  initialMode="login"
+  onAuthSuccess={() => router.push('/dashboard')}
+  onAuthError={(error) => console.error(error)}
+/>
+
+// With custom callbacks
+<AuthContainer
+  initialMode="register"
+  onAuthSuccess={handleRegistrationSuccess}
+  onAuthError={handleRegistrationError}
+/>
+```
+
+#### **Form Rendering Logic**
+
+```typescript
+const renderAuthForm = () => {
+  switch (mode) {
+    case "login":
+      return (
+        <SigninForm
+          onSuccess={handleAuthSuccess}
+          onError={handleAuthError}
+          onForgotPassword={() => setMode("forgot")}
+        />
+      );
+    case "register":
+      return (
+        <SignupForm onSuccess={handleAuthSuccess} onError={handleAuthError} />
+      );
+    case "forgot":
+      return (
+        <ResetPasswordForm
+          onSuccess={handleAuthSuccess}
+          onError={handleAuthError}
+          onBack={() => setMode("login")}
+        />
+      );
+    default:
+      return null;
+  }
+};
+```
+
+#### **Navigation System**
+
+```typescript
+const renderFooterNavigation = () => {
+  if (mode === "forgot") return null;
+
+  return (
+    <div className="mt-6 sm:mt-8 text-center">
+      {mode === "login" && (
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600">Pas encore de compte ?</p>
+          <Button
+            variant="ghost"
+            onClick={() => setMode("register")}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            Créer un compte gratuitement
+          </Button>
+        </div>
+      )}
+      {mode === "register" && (
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600">Déjà un compte ?</p>
+          <Button
+            variant="ghost"
+            onClick={() => setMode("login")}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            Se connecter
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+---
+
+### 🛡️ **AuthGuard Component**
+
+**File**: `components/auth/AuthGuard.tsx` (38 lines)
+
+Protects routes and components from unauthorized access with automatic redirects.
+
+#### **Interface & Props**
+
+```typescript
+interface AuthGuardProps {
+  children: ReactNode; // Protected content
+  redirectTo?: string; // Redirect URL (default: "/auth")
+  fallback?: ReactNode; // Custom loading component
+}
+
+export function AuthGuard({
+  children,
+  redirectTo = "/auth",
+  fallback,
+}: AuthGuardProps) {
+  const { user, loading } = useAuthGuard({ redirectTo });
+  // Protection logic
+}
+```
+
+#### **Protection Logic**
+
+```typescript
+export function AuthGuard({
+  children,
+  redirectTo = "/auth",
+  fallback,
+}: AuthGuardProps) {
+  const { user, loading } = useAuthGuard({ redirectTo });
+
+  // Show loading state
+  if (loading) {
+    return (
+      fallback || (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement...</p>
+          </div>
+        </div>
+      )
+    );
+  }
+
+  // Redirect if not authenticated (handled by useAuthGuard)
+  if (!user) {
+    return null;
+  }
+
+  // Render protected content
+  return <>{children}</>;
+}
+```
+
+#### **Usage Examples**
+
+```typescript
+// Basic route protection
+<AuthGuard>
+  <DashboardPage />
+</AuthGuard>
+
+// Custom redirect and fallback
+<AuthGuard
+  redirectTo="/login"
+  fallback={<CustomLoadingSpinner />}
+>
+  <ProtectedContent />
+</AuthGuard>
+
+// Page-level protection
+export default function ProtectedPage() {
+  return (
+    <AuthGuard>
+      <div>This content requires authentication</div>
+    </AuthGuard>
+  );
+}
+```
+
+#### **Loading States**
+
+The AuthGuard provides beautiful loading states with:
+
+- **Spinner Animation**: CSS-based loading spinner
+- **Loading Message**: User-friendly loading text
+- **Custom Fallbacks**: Configurable loading components
+- **Responsive Design**: Mobile-optimized loading states
+
+---
+
+### 📝 **Form Components**
+
+The authentication system includes specialized form components for different auth flows.
+
+#### **SigninForm Component**
+
+Handles user login with email/password authentication.
+
+**Features**:
+
+- Email validation with Zod schema
+- Password strength requirements
+- Remember me functionality
+- Forgot password link
+- Loading states and error handling
+- Responsive design
+
+**Form Fields**:
+
+```typescript
+interface SigninFormData {
+  email: string; // Email validation
+  password: string; // Minimum 6 characters
+  rememberMe?: boolean; // Optional remember me
+}
+```
+
+#### **SignupForm Component**
+
+Handles user registration with comprehensive validation.
+
+**Features**:
+
+- First name and last name fields
+- Email validation and uniqueness
+- Password strength requirements
+- Password confirmation matching
+- Terms and conditions acceptance
+- Real-time validation feedback
+
+**Form Fields**:
+
+```typescript
+interface SignupFormData {
+  firstName: string; // Minimum 2 characters
+  lastName: string; // Minimum 2 characters
+  email: string; // Email format validation
+  password: string; // Complex password requirements
+  confirmPassword: string; // Must match password
+}
+```
+
+#### **ResetPasswordForm Component**
+
+Handles password reset requests.
+
+**Features**:
+
+- Email validation for reset
+- Success/error feedback
+- Back to login navigation
+- Loading states
+- Email confirmation messaging
+
+**Form Fields**:
+
+```typescript
+interface ResetPasswordFormData {
+  email: string; // Email for password reset
+}
+```
+
+---
+
+## Authentication Page
+
+### 🎨 **Auth Page Component**
+
+**File**: `app/(auth)/auth/page.tsx` (224 lines)
+
+Beautiful, responsive authentication page with modern UI design and feature showcase.
+
+#### **Page Structure**
+
+```typescript
+export default function Authpage() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  return (
+    <div className="flex items-center justify-center p-2 sm:p-4 min-h-screen">
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-center justify-center w-full max-w-6xl">
+        {/* Left side - Auth Form */}
+        <AuthFormSection />
+
+        {/* Right side - Hero Section with Slider */}
+        <HeroSection currentSlide={currentSlide} />
+      </div>
+    </div>
+  );
+}
+```
+
+#### **Design Features**
+
+**1. Responsive Layout**
+
+- **Mobile-first**: Optimized for mobile devices
+- **Desktop Enhancement**: Two-column layout on large screens
+- **Flexible Grid**: CSS Grid with responsive breakpoints
+- **Adaptive Spacing**: Dynamic spacing based on screen size
+
+**2. Visual Design**
+
+- **Gradient Backgrounds**: Modern gradient design with backdrop blur
+- **Glass Morphism**: Semi-transparent cards with backdrop blur
+- **Brand Integration**: Edukai logo and brand colors
+- **Shadow Effects**: Layered shadows for depth
+
+**3. Interactive Elements**
+
+- **Automatic Slider**: Feature showcase with 6-second intervals
+- **Smooth Transitions**: CSS transitions for all interactions
+- **Hover Effects**: Interactive buttons and cards
+- **Loading States**: Smooth loading animations
+
+#### **Auth Form Section**
+
+```typescript
+function AuthFormSection() {
+  return (
+    <div className="flex flex-col items-center justify-center w-full lg:order-1 order-2">
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
+        <CardContent className="p-4 sm:p-6 lg:p-8">
+          {/* Header with Logo */}
+          <div className="flex items-center justify-center mb-6 sm:mb-8">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Image
+                src="/EdukaiLogo.svg"
+                alt="Logo Edukai"
+                width={32}
+                height={32}
+                className="sm:w-10 sm:h-10 rounded-full"
+              />
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                Edukai
+              </h1>
+            </div>
+          </div>
+
+          {/* Auth Container */}
+          <AuthContainer
+            initialMode="login"
+            onAuthSuccess={handleAuthSuccess}
+            onAuthError={handleAuthError}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+
+#### **Hero Section with Slider**
+
+```typescript
+function HeroSection({ currentSlide }: { currentSlide: number }) {
+  return (
+    <div className="relative flex flex-col items-center justify-center w-full lg:order-2 order-1 h-48 sm:h-64 lg:h-[600px]">
+      <div className="relative w-full h-full bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-pattern opacity-20"></div>
+
+        {/* Header Section */}
+        <HeaderSection />
+
+        {/* Slider Container */}
+        <SliderContainer currentSlide={currentSlide} />
+      </div>
+    </div>
+  );
+}
+```
+
+#### **Feature Showcase Slider**
+
+The hero section includes an interactive slider showcasing Edukai features:
+
+**Slide 1 - Application Preview**:
+
+- Screenshot of the application interface
+- Glass morphism card design
+- Hover scale effects
+
+**Slide 2 - Feature Grid**:
+
+- 4 feature cards in a 2x2 grid
+- Each card highlights a key feature:
+  - **IA Avancée**: AI-powered question generation
+  - **Rapide**: Results in under 20 seconds
+  - **Adaptatif**: Adapts to study level
+  - **Intelligent**: Analyzes weak points
+
+#### **Redirect Handling**
+
+Smart redirect system preserving user's intended destination:
+
+```typescript
+const handleAuthSuccess = () => {
+  console.log("Authentication successful");
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirectTo = urlParams.get("redirect") || "/";
+  window.location.href = redirectTo;
+};
+
+const handleAuthError = (error: string) => {
+  console.error("Authentication error:", error);
+  // Error handling with toast notifications
+};
+```
+
+---
+
+## Component Patterns
+
+### 🎯 **Design Patterns Used**
+
+#### **1. Container/Presenter Pattern**
+
+```typescript
+// Container manages state and logic
+export function AuthContainer({ initialMode, onAuthSuccess, onAuthError }) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+
+  const handleAuthSuccess = () => {
+    console.log("Auth success for mode:", mode);
+    onAuthSuccess?.();
+  };
+
+  // Renders appropriate presenter component
+  return renderAuthForm();
+}
+
+// Presenter handles UI rendering
+export function SigninForm({ onSuccess, onError, onForgotPassword }) {
+  // Pure UI component with form handling
+  return <form>...</form>;
+}
+```
+
+#### **2. Compound Component Pattern**
+
+```typescript
+// AuthContainer acts as compound component
+<AuthContainer initialMode="login">
+  <AuthContainer.SigninForm />
+  <AuthContainer.SignupForm />
+  <AuthContainer.ResetPasswordForm />
+  <AuthContainer.Navigation />
+</AuthContainer>
+```
+
+#### **3. Render Props Pattern**
+
+```typescript
+// AuthGuard with render props
+<AuthGuard>
+  {({ user, loading }) =>
+    loading ? <LoadingSpinner /> : <ProtectedContent user={user} />
+  }
+</AuthGuard>
+```
+
+#### **4. Higher-Order Component Pattern**
+
+```typescript
+// withAuth HOC for component protection
+const ProtectedComponent = withAuth(MyComponent, {
+  redirectTo: "/auth",
+  loadingComponent: CustomLoader,
+});
+```
+
+### 🎨 **Styling Patterns**
+
+#### **1. Responsive Design**
+
+```typescript
+// Mobile-first responsive classes
+className = "p-2 sm:p-4 lg:p-8 text-sm sm:text-base lg:text-lg";
+
+// Responsive grid layout
+className = "grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12";
+```
+
+#### **2. Glass Morphism**
+
+```typescript
+// Semi-transparent cards with backdrop blur
+className = "bg-white/90 backdrop-blur-sm shadow-2xl border-0";
+
+// Feature cards with glass effect
+className = "bg-white/15 backdrop-blur-md rounded-xl border border-white/20";
+```
+
+#### **3. Gradient Design**
+
+```typescript
+// Text gradients for branding
+className =
+  "bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent";
+
+// Background gradients
+className = "bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700";
+```
+
+#### **4. Interactive States**
+
+```typescript
+// Hover and focus states
+className =
+  "hover:text-blue-700 hover:bg-blue-50 focus:ring-2 focus:ring-blue-500";
+
+// Transform effects
+className = "transform hover:scale-105 transition-all duration-300";
+```
+
+---
+
+## Accessibility Features
+
+### ♿ **Accessibility Implementation**
+
+#### **1. Keyboard Navigation**
+
+- Tab order management
+- Focus indicators
+- Keyboard shortcuts
+- Screen reader support
+
+#### **2. ARIA Labels**
+
+```typescript
+// Form accessibility
+<input
+  aria-label="Email address"
+  aria-describedby="email-error"
+  aria-invalid={!!errors.email}
+/>
+
+// Loading states
+<div
+  role="status"
+  aria-live="polite"
+  aria-label="Loading authentication"
+>
+  <LoadingSpinner />
+</div>
+```
+
+#### **3. Error Handling**
+
+```typescript
+// Error announcements
+<div role="alert" aria-live="assertive" className="text-red-600">
+  {error}
+</div>
+```
+
+#### **4. Color Contrast**
+
+- WCAG AA compliant color ratios
+- High contrast mode support
+- Color-blind friendly design
+- Alternative text for images
+
+---
+
+## Performance Optimizations
+
+### ⚡ **Component Optimizations**
+
+#### **1. Lazy Loading**
+
+```typescript
+// Lazy load form components
+const SigninForm = lazy(() => import("./signin-form"));
+const SignupForm = lazy(() => import("./signup-form"));
+
+// Suspense wrapper
+<Suspense fallback={<FormSkeleton />}>
+  <SigninForm />
+</Suspense>;
+```
+
+#### **2. Memoization**
+
+```typescript
+// Memoize expensive calculations
+const passwordRequirements = useMemo(
+  () => getPasswordRequirements(password),
+  [password]
+);
+
+// Memoize callback functions
+const handleModeChange = useCallback((mode: AuthMode) => setMode(mode), []);
+```
+
+#### **3. Code Splitting**
+
+```typescript
+// Route-based code splitting
+const AuthPage = lazy(() => import("./auth/page"));
+
+// Component-based splitting
+const AuthGuard = lazy(() => import("./AuthGuard"));
+```
+
+#### **4. Bundle Optimization**
+
+- Tree shaking for unused code
+- Dynamic imports for conditional features
+- Optimized image loading
+- CSS purging for unused styles
+
+---
+
+## Testing Strategies
+
+### 🧪 **Component Testing**
+
+#### **1. Unit Tests**
+
+```typescript
+// AuthContainer tests
+describe("AuthContainer", () => {
+  it("renders login form by default", () => {
+    render(<AuthContainer />);
+    expect(screen.getByRole("form")).toBeInTheDocument();
+  });
+
+  it("switches to register mode", () => {
+    render(<AuthContainer />);
+    fireEvent.click(screen.getByText("Créer un compte"));
+    expect(screen.getByText("Inscription")).toBeInTheDocument();
+  });
+});
+```
+
+#### **2. Integration Tests**
+
+```typescript
+// AuthGuard integration tests
+describe("AuthGuard Integration", () => {
+  it("redirects unauthenticated users", async () => {
+    mockUseSession({ user: null, loading: false });
+    render(
+      <AuthGuard>
+        <div>Protected Content</div>
+      </AuthGuard>
+    );
+
+    await waitFor(() => {
+      expect(mockRouter.push).toHaveBeenCalledWith("/auth");
+    });
+  });
+});
+```
+
+#### **3. E2E Tests**
+
+```typescript
+// Cypress E2E tests
+describe("Authentication Flow", () => {
+  it("completes login flow", () => {
+    cy.visit("/auth");
+    cy.get('[data-testid="email-input"]').type("user@example.com");
+    cy.get('[data-testid="password-input"]').type("password123");
+    cy.get('[data-testid="login-button"]').click();
+    cy.url().should("include", "/dashboard");
+  });
+});
+```
+
+---
+
+**Navigation**:
+
+- 🏠 **[Authentication Overview](./overview.md)** - Complete authentication documentation
+- 🏗️ **[Architecture](./architecture.md)** - System architecture and design patterns
+- 🔗 **[Services](./services.md)** - API service layer
+- 💾 **[Session Management](./session.md)** - Session and storage management
+- 🛡️ **[Security](./security.md)** - Security features and best practices

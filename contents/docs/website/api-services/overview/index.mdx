@@ -1,0 +1,605 @@
+# Services Structure - Edukai Frontend 🔗
+
+## Overview
+
+The services directory contains the frontend API service layer that handles all communication with the Node.js backend. Services are organized by domain and provide a clean abstraction between the UI components and the backend API.
+
+## Service Directory Structure
+
+```
+📁 services/
+├── 📁 ai/                       # AI-related API services
+│   └── 📄 quiz.ts              # Quiz generation API calls
+├── 📄 auth.ts                   # Authentication API service (100 lines)
+├── 📄 course.ts                 # Course management API (183 lines)
+├── 📄 index.ts                  # Service exports
+└── 📄 insights.ts               # Analytics and insights API
+```
+
+## Service Architecture Pattern
+
+### Base Service Structure
+
+```typescript
+// Common service interface pattern
+interface BaseService {
+  baseURL: string;
+  headers: Record<string, string>;
+}
+
+// Service function factory pattern
+export function useServiceName(): ServiceInterface {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  // Service methods
+  const methodName = async (params) => {
+    try {
+      const response = await axios.request(config);
+      return response.data;
+    } catch (error) {
+      console.error("Service error:", error);
+      throw error;
+    }
+  };
+
+  return { methodName };
+}
+```
+
+## Authentication Service (`services/auth.ts`)
+
+### Service Interface
+
+```typescript
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface RegisterData {
+  username: string;
+  password: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+export interface AuthService {
+  login: (credentials: LoginCredentials) => Promise<AuthResponse>;
+  register: (userData: RegisterData) => Promise<AuthResponse>;
+  logout: () => Promise<void>;
+  refreshToken: () => Promise<{ token: string }>;
+}
+```
+
+### Implementation
+
+```typescript
+export function useAuthService(): AuthService {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    console.error("❌ NEXT_PUBLIC_API_URL not defined!");
+  }
+
+  const login = async (
+    credentials: LoginCredentials
+  ): Promise<AuthResponse> => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/login`, credentials, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        "Login error:",
+        error.response?.data?.message || error.message
+      );
+      throw error;
+    }
+  };
+
+  const register = async (userData: RegisterData): Promise<AuthResponse> => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/register`, userData, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Registration error:", error);
+      throw error;
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      console.log("Logging out...");
+      // Actual logout implementation
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw error;
+    }
+  };
+
+  const refreshToken = async (): Promise<{ token: string }> => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      throw error;
+    }
+  };
+
+  return { login, register, logout, refreshToken };
+}
+```
+
+## Course Management Service (`services/course.ts`)
+
+### Service Interface
+
+```typescript
+export interface CourseService {
+  createCourse: (title: string, subject: string, level: string) => Promise<any>;
+  getCourseById: (courseId: string) => Promise<any>;
+  addQuizToCourse: (courseId: string, quizId: string) => Promise<any>;
+  createExam: (
+    courseId: string,
+    title: string,
+    description: string,
+    date: Date
+  ) => Promise<{ id: string; message: string } | null>;
+  getExamById: (examId: string) => Promise<any>;
+  deleteExamById: (
+    examId: string,
+    courseId: string
+  ) => Promise<{ message: string } | null>;
+  updateExamById: (
+    examId: string,
+    title: string,
+    description: string,
+    date: Date
+  ) => Promise<{ message: string } | null>;
+  getCourses: () => Promise<any>;
+}
+```
+
+### Implementation Examples
+
+```typescript
+export function useCourseService() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  const createCourse = async (
+    title: string,
+    subject: string,
+    level: string
+  ) => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/courses/create`,
+        { title, subject, level },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("❌ [Course Service] Error creating course", error);
+      throw error;
+    }
+  };
+
+  const getCourseById = async (courseId: string) => {
+    try {
+      const response = await axios.get(`${apiUrl}/courses/${courseId}`, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching course ${courseId}`, error);
+    }
+  };
+
+  const getCourses = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/courses`, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching courses", error);
+    }
+  };
+
+  // Exam management methods
+  const createExam = async (
+    courseId: string,
+    title: string,
+    description: string,
+    date: Date
+  ): Promise<{ id: string; message: string } | null> => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/courses/${courseId}/exams`,
+        { title, description, date },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error creating exam for course ${courseId}`, error);
+      return null;
+    }
+  };
+
+  return {
+    createCourse,
+    getCourseById,
+    addQuizToCourse,
+    createExam,
+    getExamById,
+    updateExamById,
+    deleteExamById,
+    getCourses,
+  };
+}
+```
+
+## AI Quiz Service (`services/ai/quiz.ts`)
+
+### Service Interface
+
+```typescript
+export interface QuizService {
+  generateQuiz: (recognizedText: string[]) => Promise<any>;
+  getQuizById: (quizId: string) => Promise<any>;
+}
+```
+
+### Implementation
+
+```typescript
+export function useQuizService(): QuizService {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  const generateQuiz = async (recognizedText: string[]) => {
+    try {
+      const textString = recognizedText.join("\n");
+      const userId = getCurrentUserId();
+
+      console.log("🔍 [Quiz Service] Debug - User ID from session:", userId);
+      console.log("🔍 [Quiz Service] Debug - Text length:", textString.length);
+
+      if (!userId) {
+        console.error("❌ [Quiz Service] User not authenticated");
+        throw new Error("User not authenticated");
+      }
+
+      const response = await axios.post(
+        `${apiUrl}/ai/generate-quiz`,
+        { textString, userId },
+        { withCredentials: true }
+      );
+
+      console.log(
+        "✅ [Quiz Service] Quiz generated successfully for user:",
+        userId
+      );
+      return response.data;
+    } catch (error) {
+      console.error("❌ [Quiz Service] Error generating quiz", error);
+      throw error;
+    }
+  };
+
+  const getQuizById = async (quizId: string) => {
+    try {
+      const response = await axios.get(`${apiUrl}/quizzes/${quizId}`, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching quiz ${quizId}`, error);
+    }
+  };
+
+  return { generateQuiz, getQuizById };
+}
+```
+
+## Insights Service (`services/insights.ts`)
+
+### Service Purpose
+
+Handles analytics and user insights data:
+
+```typescript
+export interface InsightsService {
+  getQuizInsights: (quizId: string) => Promise<any>;
+  createInsight: (quizId: string, score: number) => Promise<any>;
+  getUserInsights: (userId: string) => Promise<any>;
+}
+
+export function useInsightsService(): InsightsService {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  const getQuizInsights = async (quizId: string) => {
+    try {
+      const response = await axios.get(`${apiUrl}/insights/quiz/${quizId}`, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching insights for quiz ${quizId}`, error);
+      throw error;
+    }
+  };
+
+  const createInsight = async (quizId: string, score: number) => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/insights/create`,
+        { quizId, score },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error creating insight", error);
+      throw error;
+    }
+  };
+
+  return { getQuizInsights, createInsight };
+}
+```
+
+## Service Patterns & Best Practices
+
+### 1. **Error Handling Pattern**
+
+```typescript
+// Centralized error handling
+const handleServiceError = (error: any, context: string) => {
+  const errorMessage =
+    error.response?.data?.message || error.message || "Unknown error";
+  console.error(`❌ [${context}] ${errorMessage}`, error);
+
+  // Could integrate with error tracking service here
+  // trackError(error, context);
+
+  throw new Error(errorMessage);
+};
+
+// Usage in service methods
+const serviceMethod = async (params) => {
+  try {
+    const response = await axios.request(config);
+    return response.data;
+  } catch (error) {
+    handleServiceError(error, "Course Service");
+  }
+};
+```
+
+### 2. **Request/Response Transformation**
+
+```typescript
+// Request transformation
+const transformRequest = (data: any) => {
+  // Transform camelCase to snake_case for API
+  return Object.keys(data).reduce((acc, key) => {
+    const snakeKey = key.replace(
+      /[A-Z]/g,
+      (letter) => `_${letter.toLowerCase()}`
+    );
+    acc[snakeKey] = data[key];
+    return acc;
+  }, {} as any);
+};
+
+// Response transformation
+const transformResponse = (data: any) => {
+  // Transform snake_case to camelCase from API
+  return Object.keys(data).reduce((acc, key) => {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) =>
+      letter.toUpperCase()
+    );
+    acc[camelKey] = data[key];
+    return acc;
+  }, {} as any);
+};
+```
+
+### 3. **Axios Configuration**
+
+```typescript
+// Base axios configuration
+const createApiClient = () => {
+  const client = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    withCredentials: true,
+    timeout: 10000,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  // Request interceptor
+  client.interceptors.request.use(
+    (config) => {
+      // Add auth token if available
+      const token = getAuthToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Response interceptor
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      // Handle token expiry
+      if (error.response?.status === 401) {
+        // Redirect to login or refresh token
+        handleTokenExpiry();
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  return client;
+};
+```
+
+### 4. **Service Factory Pattern**
+
+```typescript
+// Service factory for dependency injection
+export class ServiceFactory {
+  private static instance: ServiceFactory;
+
+  static getInstance(): ServiceFactory {
+    if (!ServiceFactory.instance) {
+      ServiceFactory.instance = new ServiceFactory();
+    }
+    return ServiceFactory.instance;
+  }
+
+  createAuthService(): AuthService {
+    return useAuthService();
+  }
+
+  createCourseService(): CourseService {
+    return useCourseService();
+  }
+
+  createQuizService(): QuizService {
+    return useQuizService();
+  }
+}
+
+// Usage
+const serviceFactory = ServiceFactory.getInstance();
+const authService = serviceFactory.createAuthService();
+```
+
+## Service Integration with Hooks
+
+### Custom Hook Integration
+
+```typescript
+// Service-specific hooks
+export const useAuth = () => {
+  const authService = useAuthService();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const login = async (credentials: LoginCredentials) => {
+    setLoading(true);
+    try {
+      const response = await authService.login(credentials);
+      setUser(response.user);
+      return response;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { user, loading, login };
+};
+
+// Usage in components
+const LoginForm = () => {
+  const { login, loading } = useAuth();
+
+  const handleSubmit = async (data: LoginCredentials) => {
+    try {
+      await login(data);
+      // Handle success
+    } catch (error) {
+      // Handle error
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>{/* Form implementation */}</form>;
+};
+```
+
+## Service Testing Patterns
+
+### Mock Service Implementation
+
+```typescript
+// Mock service for testing
+export const mockAuthService: AuthService = {
+  login: jest.fn().mockResolvedValue({
+    token: "mock-token",
+    user: { id: "1", username: "testuser" },
+  }),
+  register: jest.fn().mockResolvedValue({
+    token: "mock-token",
+    user: { id: "1", username: "testuser" },
+  }),
+  logout: jest.fn().mockResolvedValue(undefined),
+  refreshToken: jest.fn().mockResolvedValue({ token: "new-mock-token" }),
+};
+
+// Test example
+describe("useAuth hook", () => {
+  it("should handle login", async () => {
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <ServiceProvider authService={mockAuthService}>
+          {children}
+        </ServiceProvider>
+      ),
+    });
+
+    await act(async () => {
+      await result.current.login({ username: "test", password: "password" });
+    });
+
+    expect(mockAuthService.login).toHaveBeenCalledWith({
+      username: "test",
+      password: "password",
+    });
+  });
+});
+```
+
+## Service Metrics and Monitoring
+
+### Key Service Metrics
+
+| Service       | Lines | Methods | Complexity | Purpose             |
+| ------------- | ----- | ------- | ---------- | ------------------- |
+| `auth.ts`     | 100   | 4       | Medium     | User authentication |
+| `course.ts`   | 183   | 8       | High       | Course management   |
+| `ai/quiz.ts`  | 67    | 2       | Medium     | AI quiz generation  |
+| `insights.ts` | 89    | 3       | Medium     | Analytics data      |
+
+### Performance Considerations
+
+- **Request Deduplication**: Prevent duplicate API calls
+- **Caching**: Implement response caching for static data
+- **Retry Logic**: Handle network failures gracefully
+- **Rate Limiting**: Respect API rate limits
+
+This service layer provides a robust foundation for API communication while maintaining clean separation between the frontend and backend systems.

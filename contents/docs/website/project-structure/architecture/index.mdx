@@ -1,0 +1,348 @@
+# Architecture Overview - Edukai Frontend 🏗️
+
+## High-Level Architecture
+
+The Edukai frontend follows a modern, component-based architecture built on **Next.js 14** with App Router. The application is designed with clear separation of concerns, making it maintainable and scalable.
+
+## Architecture Layers
+
+### 1. **Presentation Layer**
+
+```
+📁 app/ (Pages & Routing)
+├── (auth)/          # Authentication pages
+└── (dashboard)/     # Main application pages
+```
+
+- **Next.js App Router** for page routing and layouts
+- **Route Groups** for logical organization without URL impact
+- **Server Components** for optimal performance
+- **Client Components** only when needed for interactivity
+
+### 2. **Component Layer**
+
+```
+📁 components/
+├── ui/              # Base ShadCN UI components
+├── auth/            # Authentication components
+├── generator/       # Content generation UI
+├── sidebar/         # Navigation components
+└── [feature]/       # Feature-specific components
+```
+
+- **Reusable Components** following single responsibility principle
+- **Composition over Inheritance** pattern
+- **TypeScript Typing** for all component props
+- **Responsive Design** with Tailwind CSS
+
+### 3. **Business Logic Layer**
+
+```
+📁 hooks/
+├── useAuth.ts       # Authentication logic
+├── useQuiz.ts       # Quiz functionality
+├── useCourse.ts     # Course management
+└── [feature].ts     # Feature-specific logic
+```
+
+- **Custom React Hooks** for business logic abstraction
+- **State Management** through React state and hooks
+- **Side Effects** handled in hooks with proper cleanup
+- **Reusable Logic** across different components
+
+### 4. **Service Layer**
+
+```
+📁 services/
+├── auth.ts          # Authentication API calls
+├── course.ts        # Course management API
+├── ai/quiz.ts       # AI quiz generation
+└── insights.ts      # Analytics API
+```
+
+- **API Abstraction** for all backend communication
+- **Error Handling** centralized in service layer
+- **Type Safety** with TypeScript interfaces
+- **Axios Configuration** for HTTP requests
+
+### 5. **Utility Layer**
+
+```
+📁 lib/
+├── schemas/         # Zod validation schemas
+├── types/           # TypeScript type definitions
+├── actions/         # Server actions
+└── utils.ts         # General utilities
+```
+
+- **Validation** with Zod schemas
+- **Type Definitions** for consistent typing
+- **Helper Functions** for common operations
+- **Server Actions** for form handling
+
+## Key Architecture Patterns
+
+### 1. **Component Composition**
+
+```typescript
+// Higher-order component pattern
+const withAuth = (Component) => {
+  return function AuthenticatedComponent(props) {
+    const { user } = useSession();
+    if (!user) return <LoginForm />;
+    return <Component {...props} />;
+  };
+};
+
+// Composition pattern
+const Dashboard = () => (
+  <Layout>
+    <Sidebar />
+    <MainContent>
+      <Header />
+      <Content />
+    </MainContent>
+  </Layout>
+);
+```
+
+### 2. **Custom Hooks Pattern**
+
+```typescript
+// Business logic abstraction
+const useQuiz = (quizService) => {
+  const [quiz, setQuiz] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const generateQuiz = async (content) => {
+    setLoading(true);
+    try {
+      const result = await quizService.generate(content);
+      setQuiz(result);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { quiz, loading, generateQuiz };
+};
+```
+
+### 3. **Service Layer Pattern**
+
+```typescript
+// API service abstraction
+export const courseService = {
+  async getCourses() {
+    const response = await axios.get("/api/courses");
+    return response.data;
+  },
+
+  async createCourse(courseData) {
+    const response = await axios.post("/api/courses", courseData);
+    return response.data;
+  },
+};
+```
+
+### 4. **Schema Validation**
+
+```typescript
+// Zod schema validation
+const CourseSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  subject: z.string().min(1, "Subject is required"),
+  level: z.enum(["beginner", "intermediate", "advanced"]),
+});
+
+type Course = z.infer<typeof CourseSchema>;
+```
+
+## Data Flow Architecture
+
+### 1. **Unidirectional Data Flow**
+
+```
+User Action → Component → Hook → Service → API → Backend
+                ↓
+User Interface ← Component ← Hook ← Service ← Response ← Backend
+```
+
+### 2. **State Management Flow**
+
+```
+Local State (useState) → Component State
+                      ↓
+Global State (Custom Hooks) → Shared State
+                            ↓
+Server State (API Calls) → Remote State
+```
+
+### 3. **Authentication Flow**
+
+```
+Login → Service → Token Storage → Session Hook → Protected Routes
+                       ↓
+Auto-Refresh → Token Validation → Session Update → UI Update
+```
+
+## Component Architecture
+
+### 1. **Component Hierarchy**
+
+```
+App Layout
+├── Theme Provider
+├── Navigation System
+│   ├── Sidebar
+│   └── Breadcrumb
+├── Route Groups
+│   ├── (auth)
+│   │   ├── Login
+│   │   └── Register
+│   └── (dashboard)
+│       ├── Dashboard
+│       ├── Library
+│       ├── Generator
+│       └── Settings
+└── Toast Provider
+```
+
+### 2. **Component Types**
+
+- **Layout Components**: Structural components (layouts, wrappers)
+- **UI Components**: Reusable interface elements (buttons, inputs)
+- **Feature Components**: Business logic components (forms, tables)
+- **Page Components**: Route-specific components
+
+### 3. **Component Communication**
+
+```typescript
+// Props down, callbacks up
+const Parent = () => {
+  const [data, setData] = useState([]);
+
+  return <Child data={data} onDataChange={setData} />;
+};
+
+// Context for global state
+const ThemeContext = createContext();
+const useTheme = () => useContext(ThemeContext);
+```
+
+## Performance Architecture
+
+### 1. **Rendering Optimization**
+
+- **Server Components** by default for better performance
+- **Client Components** only when necessary
+- **Dynamic Imports** for code splitting
+- **Memoization** for expensive calculations
+
+### 2. **Bundle Optimization**
+
+- **Tree Shaking** for unused code elimination
+- **Code Splitting** at route level
+- **Lazy Loading** for non-critical components
+- **Image Optimization** with Next.js Image component
+
+### 3. **Caching Strategy**
+
+- **Static Generation** for unchanging content
+- **Incremental Static Regeneration** for semi-dynamic content
+- **Client-side Caching** for API responses
+- **Browser Caching** for static assets
+
+## Security Architecture
+
+### 1. **Authentication Security**
+
+- **JWT Tokens** for stateless authentication
+- **HTTP-only Cookies** for token storage
+- **Token Refresh** mechanism
+- **Route Protection** with middleware
+
+### 2. **Input Validation**
+
+- **Client-side Validation** with Zod schemas
+- **Server-side Validation** in API routes
+- **Sanitization** of user inputs
+- **CSRF Protection** built into Next.js
+
+### 3. **API Security**
+
+- **CORS Configuration** for cross-origin requests
+- **Request Validation** with TypeScript
+- **Error Handling** without exposing sensitive data
+- **Rate Limiting** considerations
+
+## Scalability Considerations
+
+### 1. **Code Organization**
+
+- **Feature-based Structure** for large applications
+- **Barrel Exports** for clean imports
+- **Consistent Naming** conventions
+- **Modular Architecture** for easy maintenance
+
+### 2. **Performance Scaling**
+
+- **Component Lazy Loading** for large component trees
+- **Virtual Scrolling** for large lists
+- **Memoization** for expensive operations
+- **Debouncing** for frequent operations
+
+### 3. **Team Scaling**
+
+- **Clear Separation** of concerns
+- **Consistent Patterns** across the codebase
+- **TypeScript** for better developer experience
+- **Documentation** for knowledge sharing
+
+## Technology Stack Integration
+
+### 1. **Next.js 14 Features**
+
+- **App Router** for file-based routing
+- **Server Components** for performance
+- **Middleware** for request processing
+- **API Routes** for backend integration
+
+### 2. **React 18 Features**
+
+- **Concurrent Features** for better UX
+- **Suspense** for loading states
+- **Error Boundaries** for error handling
+- **Custom Hooks** for logic reuse
+
+### 3. **TypeScript Integration**
+
+- **Strict Type Checking** for reliability
+- **Interface Definitions** for contracts
+- **Generic Types** for reusability
+- **Type Inference** for developer experience
+
+### 4. **Tailwind CSS Architecture**
+
+- **Utility-first** approach
+- **Component Variants** with CVA
+- **Responsive Design** built-in
+- **Dark Mode** support
+
+## Future Architecture Considerations
+
+### 1. **Potential Enhancements**
+
+- **State Management Library** (Zustand/Redux) if complexity grows
+- **Micro-frontends** for very large applications
+- **PWA Features** for offline functionality
+- **WebAssembly** for performance-critical operations
+
+### 2. **Monitoring & Observability**
+
+- **Error Tracking** integration
+- **Performance Monitoring** setup
+- **User Analytics** implementation
+- **A/B Testing** framework
+
+This architecture provides a solid foundation for a scalable, maintainable, and performant frontend application that can grow with the project's needs.

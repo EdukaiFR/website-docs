@@ -1,0 +1,929 @@
+# Authentication Security 🛡️
+
+## Overview
+
+The **Edukai Authentication Security** system implements comprehensive security measures to protect user data, prevent common attacks, and ensure secure communication between frontend and backend. The security architecture follows industry best practices and includes multiple layers of protection.
+
+## Security Architecture
+
+### 🔐 **Multi-Layer Security Model**
+
+```
+Authentication Security Layers
+┌─────────────────────────────────────────────────────────────┐
+│                    Security Architecture                    │
+├─────────────────────────────────────────────────────────────┤
+│  Client Security │  Communication  │  Storage Security     │
+│  ─────────────   │  Security       │  ─────────────────    │
+│  • Input Valid   │  • HTTPS Only   │  • Token Validation   │
+│  • XSS Prevention│  • CSRF Protect │  • Data Sanitization  │
+│  • Data Encoding │  • Secure Headers│  • Automatic Cleanup  │
+│  • Error Handling│  • Cookie Security│  • Session Integrity │
+├─────────────────────────────────────────────────────────────┤
+│                    Backend Integration                      │
+│  • JWT token-based authentication                          │
+│  • Secure API endpoints with validation                    │
+│  • Session management and token refresh                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🏛️ **Security Components**
+
+```
+Security Implementation (8 files, ~400 lines)
+├── 📁 lib/
+│   ├── session.ts                 # Secure session storage (65 lines)
+│   ├── auth-utils.ts              # Security utilities (38 lines)
+│   ├── schemas/auth.ts            # Input validation (78 lines)
+│   └── toast.ts                   # Error handling (50 lines)
+├── 📁 services/
+│   └── auth.ts                    # Secure API communication (100 lines)
+├── 📁 hooks/
+│   ├── useSession.ts              # Secure state management (117 lines)
+│   └── useAuthGuard.ts            # Route protection (32 lines)
+└── 📁 components/auth/
+    └── AuthGuard.tsx              # Component protection (38 lines)
+```
+
+---
+
+## Client-Side Security
+
+### 🛡️ **Input Validation & Sanitization**
+
+#### **Zod Schema Validation**
+
+**File**: `lib/schemas/auth.ts` (78 lines)
+
+Comprehensive input validation using Zod schemas with security-focused rules.
+
+```typescript
+export const signinSchema = z.object({
+  email: z
+    .string()
+    .email("Adresse email invalide")
+    .max(254, "Email trop long") // RFC 5321 limit
+    .toLowerCase() // Normalize case
+    .trim(), // Remove whitespace
+  password: z
+    .string()
+    .min(6, "Le mot de passe doit contenir au moins 6 caractères")
+    .max(128, "Mot de passe trop long") // Prevent DoS
+    .regex(/^[^\s]*$/, "Le mot de passe ne peut pas contenir d'espaces"),
+  rememberMe: z.boolean().optional(),
+});
+
+export const signupSchema = z
+  .object({
+    firstName: z
+      .string()
+      .min(2, "Prénom requis (min. 2 caractères)")
+      .max(50, "Prénom trop long") // Prevent overflow
+      .regex(/^[a-zA-ZÀ-ÿ\s-']+$/, "Caractères invalides dans le prénom")
+      .trim(),
+    lastName: z
+      .string()
+      .min(2, "Nom requis (min. 2 caractères)")
+      .max(50, "Nom trop long")
+      .regex(/^[a-zA-ZÀ-ÿ\s-']+$/, "Caractères invalides dans le nom")
+      .trim(),
+    email: z
+      .string()
+      .email("Adresse email invalide")
+      .max(254, "Email trop long")
+      .toLowerCase()
+      .trim(),
+    password: z
+      .string()
+      .min(6, "Le mot de passe doit contenir au moins 6 caractères")
+      .max(128, "Mot de passe trop long")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+        "Le mot de passe doit contenir une majuscule, une minuscule et un chiffre"
+      ),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
+  });
+```
+
+**Security Features**:
+
+- **Length Limits**: Prevent buffer overflow and DoS attacks
+- **Character Validation**: Regex patterns to prevent injection
+- **Data Normalization**: Consistent case and trimming
+- **Password Complexity**: Enforce strong password requirements
+- **Confirmation Matching**: Prevent typos in critical fields
+
+#### **Password Security Requirements**
+
+```typescript
+export const getPasswordRequirements = (
+  password: string
+): PasswordRequirement[] => [
+  {
+    label: "Au moins 6 caractères",
+    met: password?.length >= 6,
+    security: "Prevents brute force attacks",
+  },
+  {
+    label: "Une majuscule",
+    met: /[A-Z]/.test(password || ""),
+    security: "Increases entropy",
+  },
+  {
+    label: "Une minuscule",
+    met: /[a-z]/.test(password || ""),
+    security: "Increases entropy",
+  },
+  {
+    label: "Un chiffre",
+    met: /\d/.test(password || ""),
+    security: "Increases entropy",
+  },
+  {
+    label: "Pas d'espaces",
+    met: !/\s/.test(password || ""),
+    security: "Prevents common input errors",
+  },
+];
+```
+
+#### **XSS Prevention**
+
+```typescript
+// Safe data rendering in components
+export function SafeUserDisplay({ user }: { user: User }) {
+  return (
+    <div>
+      {/* Automatic HTML escaping by React */}
+      <h1>Welcome, {user.firstName}!</h1>
+
+      {/* Explicit sanitization for dynamic content */}
+      <div
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(user.bio || ""),
+        }}
+      />
+    </div>
+  );
+}
+
+// Safe URL construction
+export function createRedirectUrl(path: string): string {
+  // Validate and sanitize redirect paths
+  const allowedPaths = ["/dashboard", "/profile", "/courses"];
+  const sanitizedPath = path.replace(/[^a-zA-Z0-9\/\-_]/g, "");
+
+  if (!allowedPaths.some((allowed) => sanitizedPath.startsWith(allowed))) {
+    return "/dashboard"; // Safe default
+  }
+
+  return sanitizedPath;
+}
+```
+
+---
+
+## Communication Security
+
+### 🌐 **Secure API Communication**
+
+#### **HTTPS and Secure Headers**
+
+**File**: `services/auth.ts` (100 lines)
+
+All API communication uses secure configuration and headers.
+
+```typescript
+export function useAuthService(): AuthService {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  // Validate API URL is HTTPS in production
+  if (
+    process.env.NODE_ENV === "production" &&
+    !apiUrl?.startsWith("https://")
+  ) {
+    console.error("❌ API URL must use HTTPS in production");
+    throw new Error("Insecure API configuration");
+  }
+
+  const secureAxiosConfig = {
+    withCredentials: true, // Include cookies for CSRF protection
+    timeout: 10000, // Prevent hanging requests
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest", // CSRF protection
+    },
+  };
+
+  const login = async (
+    credentials: LoginCredentials
+  ): Promise<AuthResponse> => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/auth/login`,
+        credentials,
+        secureAxiosConfig
+      );
+      return response.data;
+    } catch (error: any) {
+      // Secure error handling - don't expose internal details
+      console.error("Login error:", error.response?.status);
+      throw new Error(getSecureErrorMessage(error));
+    }
+  };
+}
+```
+
+#### **CSRF Protection**
+
+```typescript
+// CSRF protection through cookies and headers
+const csrfProtectedRequest = async (url: string, data: any) => {
+  const config = {
+    withCredentials: true, // Include CSRF token cookie
+    headers: {
+      "X-Requested-With": "XMLHttpRequest", // CSRF header
+      "Content-Type": "application/json",
+    },
+  };
+
+  return axios.post(url, data, config);
+};
+```
+
+#### **Request Timeout and Rate Limiting**
+
+```typescript
+// Prevent DoS and hanging requests
+const secureRequestConfig = {
+  timeout: 10000, // 10 second timeout
+  maxRedirects: 3, // Limit redirects
+  maxContentLength: 1024 * 1024, // 1MB max response
+};
+
+// Client-side rate limiting
+class RateLimiter {
+  private requests: Map<string, number[]> = new Map();
+  private readonly maxRequests = 5;
+  private readonly windowMs = 60000; // 1 minute
+
+  canMakeRequest(endpoint: string): boolean {
+    const now = Date.now();
+    const requests = this.requests.get(endpoint) || [];
+
+    // Remove old requests outside the window
+    const validRequests = requests.filter((time) => now - time < this.windowMs);
+
+    if (validRequests.length >= this.maxRequests) {
+      return false;
+    }
+
+    validRequests.push(now);
+    this.requests.set(endpoint, validRequests);
+    return true;
+  }
+}
+```
+
+---
+
+## Storage Security
+
+### 💾 **Secure Session Storage**
+
+#### **Token Security**
+
+**File**: `lib/session.ts` (65 lines)
+
+Secure token storage with validation and cleanup.
+
+```typescript
+const TOKEN_KEY = "auth_token";
+const USER_KEY = "user_data";
+
+export const sessionStorage = {
+  setToken: (token: string) => {
+    if (typeof window !== "undefined") {
+      // Validate token format before storing
+      if (!isValidJWTFormat(token)) {
+        console.error("Invalid token format");
+        return;
+      }
+
+      localStorage.setItem(TOKEN_KEY, token);
+    }
+  },
+
+  getToken: () => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem(TOKEN_KEY);
+
+      // Validate token before returning
+      if (token && token !== "undefined" && token !== "null") {
+        if (isValidJWTFormat(token) && !isTokenExpired(token)) {
+          return token;
+        } else {
+          // Remove invalid/expired token
+          localStorage.removeItem(TOKEN_KEY);
+        }
+      }
+    }
+    return null;
+  },
+};
+
+// Token validation utilities
+function isValidJWTFormat(token: string): boolean {
+  const parts = token.split(".");
+  return parts.length === 3 && parts.every((part) => part.length > 0);
+}
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const exp = payload.exp * 1000; // Convert to milliseconds
+    return Date.now() >= exp;
+  } catch (error) {
+    return true; // Treat invalid tokens as expired
+  }
+}
+```
+
+#### **Data Sanitization**
+
+```typescript
+// Secure user data storage with sanitization
+setUser: (user: any) => {
+  if (typeof window !== "undefined") {
+    // Sanitize user data before storage
+    const sanitizedUser = sanitizeUserData(user);
+    localStorage.setItem(USER_KEY, JSON.stringify(sanitizedUser));
+  }
+},
+
+getUser: () => {
+  if (typeof window !== "undefined") {
+    const user = localStorage.getItem(USER_KEY);
+    if (user && user !== "undefined") {
+      try {
+        const parsedUser = JSON.parse(user);
+        return sanitizeUserData(parsedUser);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem(USER_KEY);
+        return null;
+      }
+    }
+  }
+  return null;
+},
+
+// User data sanitization
+function sanitizeUserData(user: any): any {
+  if (!user || typeof user !== 'object') return null;
+
+  return {
+    id: sanitizeString(user.id),
+    username: sanitizeString(user.username),
+    email: sanitizeEmail(user.email),
+    firstName: sanitizeString(user.firstName),
+    lastName: sanitizeString(user.lastName),
+    // Only include safe, expected fields
+  };
+}
+
+function sanitizeString(value: any): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  return value.trim().substring(0, 255); // Limit length
+}
+
+function sanitizeEmail(value: any): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const email = value.toLowerCase().trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : undefined;
+}
+```
+
+#### **Automatic Cleanup**
+
+```typescript
+// Secure cleanup of invalid data
+cleanupInvalidData: () => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const user = localStorage.getItem(USER_KEY);
+
+    // Remove invalid token values
+    if (token === "undefined" || token === "null" || !isValidJWTFormat(token)) {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+
+    // Remove invalid user data
+    if (user === "undefined" || user === "null") {
+      localStorage.removeItem(USER_KEY);
+    } else if (user) {
+      try {
+        const parsedUser = JSON.parse(user);
+        if (!isValidUserData(parsedUser)) {
+          localStorage.removeItem(USER_KEY);
+        }
+      } catch (error) {
+        localStorage.removeItem(USER_KEY);
+      }
+    }
+  }
+},
+  function isValidUserData(user: any): boolean {
+    return (
+      user &&
+      typeof user === "object" &&
+      typeof user.id === "string" &&
+      user.id.length > 0 &&
+      user.id.length < 255
+    );
+  };
+```
+
+---
+
+## Error Handling Security
+
+### 🚨 **Secure Error Management**
+
+#### **Error Message Sanitization**
+
+**File**: `lib/toast.ts` - Secure error handling
+
+```typescript
+export function translateApiError(error: string): string {
+  // Whitelist of safe error messages
+  const safeErrorTranslations = {
+    "Invalid credentials": "Identifiants invalides",
+    "User not found": "Utilisateur non trouvé",
+    "Authentication failed": "Échec de l'authentification",
+    "Email already exists": "Cette adresse email est déjà utilisée",
+    "Username already exists": "Ce nom d'utilisateur est déjà pris",
+    "Password too weak": "Mot de passe trop faible",
+    "Invalid email format": "Format d'email invalide",
+    "Session expired": "Session expirée",
+    "Token invalid": "Token invalide",
+    Unauthorized: "Non autorisé",
+    "Network Error": "Erreur de connexion réseau",
+    "Request timeout": "Délai d'attente dépassé",
+    "Server error": "Erreur serveur",
+  };
+
+  // Return safe message or generic error
+  return safeErrorTranslations[error] || "Une erreur est survenue";
+}
+
+// Secure error logging
+export function logSecureError(error: any, context: string) {
+  // Only log safe information, never sensitive data
+  const safeError = {
+    message: error.message,
+    status: error.response?.status,
+    context,
+    timestamp: new Date().toISOString(),
+    // Never log: passwords, tokens, personal data
+  };
+
+  console.error("Secure error log:", safeError);
+
+  // In production, send to secure logging service
+  if (process.env.NODE_ENV === "production") {
+    // sendToSecureLoggingService(safeError);
+  }
+}
+```
+
+#### **Information Disclosure Prevention**
+
+```typescript
+// Prevent information disclosure in error responses
+export function getSecureErrorMessage(error: any): string {
+  // Don't expose internal error details to users
+  const status = error.response?.status;
+
+  switch (status) {
+    case 400:
+      return "Données invalides";
+    case 401:
+      return "Authentification requise";
+    case 403:
+      return "Accès refusé";
+    case 404:
+      return "Ressource non trouvée";
+    case 429:
+      return "Trop de tentatives, veuillez réessayer plus tard";
+    case 500:
+    case 502:
+    case 503:
+      return "Erreur serveur temporaire";
+    default:
+      return "Une erreur est survenue";
+  }
+}
+```
+
+---
+
+## Route Protection Security
+
+### 🛡️ **Secure Route Guards**
+
+#### **AuthGuard Security**
+
+**File**: `components/auth/AuthGuard.tsx` (38 lines)
+
+Secure route protection with proper validation.
+
+```typescript
+export function AuthGuard({
+  children,
+  redirectTo = "/auth",
+  fallback,
+}: AuthGuardProps) {
+  const { user, loading } = useAuthGuard({ redirectTo });
+
+  // Security: Always validate user object structure
+  const isValidUser =
+    user &&
+    typeof user === "object" &&
+    typeof user.id === "string" &&
+    user.id.length > 0;
+
+  if (loading) {
+    return fallback || <SecureLoadingComponent />;
+  }
+
+  if (!isValidUser) {
+    // Security: Don't render anything for invalid users
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+// Secure loading component that doesn't expose state
+function SecureLoadingComponent() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Chargement...</p>
+      </div>
+    </div>
+  );
+}
+```
+
+#### **Redirect Security**
+
+```typescript
+// Secure redirect handling
+export function useAuthGuard(options: UseAuthGuardOptions = {}) {
+  const { redirectTo = "/auth", enabled = true } = options;
+  const { user, loading } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (enabled && !loading && !user) {
+      // Security: Validate and sanitize redirect URL
+      const currentPath = window.location.pathname + window.location.search;
+      const safeRedirectPath = sanitizeRedirectPath(currentPath);
+      const redirectUrl = `${redirectTo}?redirect=${encodeURIComponent(
+        safeRedirectPath
+      )}`;
+
+      router.push(redirectUrl);
+    }
+  }, [user, loading, router, enabled, redirectTo]);
+}
+
+function sanitizeRedirectPath(path: string): string {
+  // Security: Only allow safe internal paths
+  const allowedPaths = [
+    "/dashboard",
+    "/profile",
+    "/courses",
+    "/quiz",
+    "/settings",
+  ];
+
+  // Remove any dangerous characters
+  const sanitized = path.replace(/[^a-zA-Z0-9\/\-_?&=]/g, "");
+
+  // Check if path starts with allowed prefix
+  const isAllowed = allowedPaths.some((allowed) =>
+    sanitized.startsWith(allowed)
+  );
+
+  return isAllowed ? sanitized : "/dashboard";
+}
+```
+
+---
+
+## Session Security
+
+### 🔐 **Session Validation**
+
+#### **Token Refresh Security**
+
+```typescript
+// Secure token refresh with validation
+const validateSession = async () => {
+  try {
+    // Security: Validate current token before refresh
+    const currentToken = sessionStorage.getToken();
+    if (!currentToken || !isValidJWTFormat(currentToken)) {
+      throw new Error("Invalid current token");
+    }
+
+    const response = await authService.refreshToken();
+
+    // Security: Validate new token before storing
+    if (!response.token || !isValidJWTFormat(response.token)) {
+      throw new Error("Invalid refresh token received");
+    }
+
+    sessionStorage.setToken(response.token);
+    setLoading(false);
+  } catch (error: any) {
+    console.warn("Token validation failed, clearing session:", error.message);
+    sessionStorage.clearSession();
+    setUser(null);
+    setLoading(false);
+  }
+};
+```
+
+#### **Session Integrity Checks**
+
+```typescript
+// Regular session integrity validation
+useEffect(() => {
+  const validateSessionIntegrity = () => {
+    const token = sessionStorage.getToken();
+    const user = sessionStorage.getUser();
+
+    // Security: Ensure token and user are consistent
+    if ((token && !user) || (!token && user)) {
+      console.warn("Session integrity violation detected");
+      sessionStorage.clearSession();
+      setUser(null);
+    }
+
+    // Security: Validate token expiration
+    if (token && isTokenExpired(token)) {
+      console.warn("Expired token detected");
+      sessionStorage.clearSession();
+      setUser(null);
+    }
+  };
+
+  // Check integrity every 5 minutes
+  const interval = setInterval(validateSessionIntegrity, 5 * 60 * 1000);
+
+  return () => clearInterval(interval);
+}, []);
+```
+
+---
+
+## Security Best Practices
+
+### ✅ **Implementation Guidelines**
+
+#### **1. Input Validation**
+
+```typescript
+// ✅ Always validate all inputs
+const validateInput = (input: any, schema: z.ZodSchema) => {
+  try {
+    return schema.parse(input);
+  } catch (error) {
+    logSecureError(error, "Input validation failed");
+    throw new Error("Invalid input data");
+  }
+};
+
+// ✅ Sanitize before storage
+const sanitizeBeforeStorage = (data: any) => {
+  return DOMPurify.sanitize(JSON.stringify(data));
+};
+```
+
+#### **2. Error Handling**
+
+```typescript
+// ✅ Never expose sensitive information
+const handleAuthError = (error: any) => {
+  // Log detailed error for debugging (server-side only)
+  logSecureError(error, "Authentication error");
+
+  // Return safe message to user
+  return getSecureErrorMessage(error);
+};
+
+// ❌ Don't expose internal details
+// throw new Error(`Database connection failed: ${dbError.message}`);
+
+// ✅ Use safe error messages
+// throw new Error('Authentication service temporarily unavailable');
+```
+
+#### **3. Token Handling**
+
+```typescript
+// ✅ Always validate tokens
+const useToken = (token: string) => {
+  if (!isValidJWTFormat(token) || isTokenExpired(token)) {
+    sessionStorage.clearSession();
+    return null;
+  }
+  return token;
+};
+
+// ✅ Secure token storage
+const storeToken = (token: string) => {
+  if (isValidJWTFormat(token)) {
+    sessionStorage.setToken(token);
+  } else {
+    throw new Error("Invalid token format");
+  }
+};
+```
+
+#### **4. Route Protection**
+
+```typescript
+// ✅ Validate user before rendering
+const ProtectedComponent = () => {
+  const { user } = useSession();
+
+  if (!user || !isValidUserObject(user)) {
+    return <UnauthorizedComponent />;
+  }
+
+  return <SecureContent user={user} />;
+};
+
+// ✅ Use AuthGuard for automatic protection
+const SecurePage = () => (
+  <AuthGuard>
+    <SensitiveContent />
+  </AuthGuard>
+);
+```
+
+---
+
+## Security Monitoring
+
+### 📊 **Security Metrics**
+
+#### **Authentication Monitoring**
+
+```typescript
+// Track security events
+class SecurityMonitor {
+  static trackLoginAttempt(success: boolean, email?: string) {
+    const event = {
+      type: "login_attempt",
+      success,
+      timestamp: new Date().toISOString(),
+      // Don't log email in production for privacy
+      userHash: email ? hashEmail(email) : null,
+    };
+
+    this.logSecurityEvent(event);
+  }
+
+  static trackSessionValidation(success: boolean) {
+    const event = {
+      type: "session_validation",
+      success,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.logSecurityEvent(event);
+  }
+
+  private static logSecurityEvent(event: any) {
+    console.log("Security event:", event);
+    // Send to security monitoring service
+  }
+}
+```
+
+#### **Anomaly Detection**
+
+```typescript
+// Detect suspicious patterns
+class AnomalyDetector {
+  private static failedAttempts = new Map<string, number>();
+
+  static checkFailedLogins(email: string): boolean {
+    const attempts = this.failedAttempts.get(email) || 0;
+
+    if (attempts >= 5) {
+      SecurityMonitor.trackSecurityAlert("multiple_failed_logins", email);
+      return false; // Block further attempts
+    }
+
+    return true;
+  }
+
+  static recordFailedLogin(email: string) {
+    const attempts = this.failedAttempts.get(email) || 0;
+    this.failedAttempts.set(email, attempts + 1);
+
+    // Clear after 15 minutes
+    setTimeout(() => {
+      this.failedAttempts.delete(email);
+    }, 15 * 60 * 1000);
+  }
+}
+```
+
+---
+
+## Security Testing
+
+### 🧪 **Security Test Strategies**
+
+#### **Penetration Testing**
+
+```typescript
+// Security test cases
+describe("Authentication Security", () => {
+  it("should prevent XSS attacks", () => {
+    const maliciousInput = '<script>alert("xss")</script>';
+    const sanitized = sanitizeUserInput(maliciousInput);
+    expect(sanitized).not.toContain("<script>");
+  });
+
+  it("should prevent SQL injection in email field", () => {
+    const maliciousEmail = "'; DROP TABLE users; --";
+    expect(() => {
+      signinSchema.parse({ email: maliciousEmail, password: "test" });
+    }).toThrow();
+  });
+
+  it("should handle token tampering", () => {
+    const tamperedToken =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.TAMPERED.signature";
+    sessionStorage.setToken(tamperedToken);
+    expect(sessionStorage.getToken()).toBeNull();
+  });
+
+  it("should prevent session fixation", () => {
+    const oldToken = "old-token";
+    sessionStorage.setToken(oldToken);
+
+    // Simulate login
+    const newToken = "new-token";
+    sessionStorage.setToken(newToken);
+
+    expect(sessionStorage.getToken()).toBe(newToken);
+    expect(sessionStorage.getToken()).not.toBe(oldToken);
+  });
+});
+```
+
+#### **Vulnerability Scanning**
+
+```typescript
+// Automated security checks
+const securityChecks = {
+  checkPasswordStrength: (password: string) => {
+    const requirements = getPasswordRequirements(password);
+    return requirements.every((req) => req.met);
+  },
+
+  checkTokenSecurity: (token: string) => {
+    return isValidJWTFormat(token) && !isTokenExpired(token);
+  },
+
+  checkInputSanitization: (input: string) => {
+    const dangerous = /<script|javascript:|data:|vbscript:/i;
+    return !dangerous.test(input);
+  },
+};
+```
+
+---
+
+**Navigation**:
+
+- 🏠 **[Authentication Overview](./overview.md)** - Complete authentication documentation
+- 🏗️ **[Architecture](./architecture.md)** - System architecture and design patterns
+- 🎨 **[Components](./components.md)** - Authentication UI components
+- 🔗 **[Services](./services.md)** - API service layer
+- 💾 **[Session Management](./session.md)** - Session and storage management

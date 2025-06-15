@@ -48,55 +48,88 @@ export type EachRoute = {
 export const ROUTES: EachRoute[] = [
   {
     title: "Getting Started",
-    href: "/getting-started",
+    href: "/website/getting-started",
     noLink: true,
     items: [
-      { title: "Introduction", href: "/introduction" },
-      { title: "Installation", href: "/installation" },
-      // { title: "Adding Features", href: "/adding-features" },
-      // {
-      //   title: "Understanding The Architecture",
-      //   href: "/understanding-the-architecture",
-      // },
+      { title: "Overview", href: "/README" },
+      { title: "Project Structure", href: "/project-structure" },
     ],
   },
   {
-    title: "Development Guide",
-    href: "/development-guide",
+    title: "Project Architecture",
+    href: "/website/project-structure",
     noLink: true,
     items: [
-      { title: "Adding Page", href: "/adding-page" },
-      {
-        title: "Creating Customizable Components",
-        href: "/creating-customizable-components",
-      },
-      {
-        title: "Styling with ShadcnUI & Tailwind",
-        href: "/styling-with-shadcnui-and-tailwind",
-      },
-      { title: "Setting up API Routes", href: "/setting-up-api-routes" },
-      { title: "Environment Variables", href: "/environment-variables" },
-      {
-        title: "Form Handling & Validation",
-        href: "/form-handling-and-validation",
-      },
-      {
-        title: "Custom Hooks & Utility Functions",
-        href: "/custom-hooks-and-utility-functions",
-      },
-      { title: "Testing & Debugging", href: "/testing-and-debugging" },
-      { title: "Optimazing Performance", href: "/optimizing-performance" },
-      {
-        title: "Error Handling & Logging",
-        href: "/error-handling-and-logging",
-      },
-      { title: "SEO & Metadata", href: "/configuring-seo-and-metadata" },
-      {
-        title: "Git & Version Control",
-        href: "/working-with-git-and-version-control",
-      },
-      { title: "CI/CD Vercel", href: "/cicd-with-vercel" },
-      { title: "Deploying", href: "/deploying-to-production" },
+      { title: "Project Structure", href: "/overview" },
+      { title: "Architecture", href: "/architecture" },
+    ],
+  },
+  {
+    title: "Authentication",
+    href: "/website/authentication",
+    noLink: true,
+    items: [
+      { title: "Overview", href: "/overview" },
+      { title: "Architecture", href: "/architecture" },
+      { title: "Components", href: "/components" },
+      { title: "Services", href: "/services" },
+      { title: "Session Management", href: "/session" },
+      { title: "Security", href: "/security" },
+    ],
+  },
+  {
+    title: "Components",
+    href: "/website/components",
+    noLink: true,
+    items: [{ title: "Overview", href: "/overview" }],
+  },
+  {
+    title: "API Services",
+    href: "/website/api-services",
+    noLink: true,
+    items: [{ title: "Overview", href: "/overview" }],
+  },
+  {
+    title: "Development",
+    href: "/website/development",
+    noLink: true,
+    items: [
+      { title: "Overview", href: "/overview" },
+      { title: "Configuration", href: "/configuration" },
+    ],
+  },
+  {
+    title: "UI & UX",
+    href: "/website/ui-ux",
+    noLink: true,
+    items: [
+      { title: "Design System", href: "/design-system" },
+      { title: "Loading UX", href: "/loading-ux" },
+      { title: "Navigation", href: "/navigation" },
+    ],
+  },
+  {
+    title: "Advanced Features",
+    href: "/website/advanced-features",
+    noLink: true,
+    items: [
+      { title: "Course Management", href: "/course-management" },
+      { title: "Quiz System", href: "/quiz-system" },
+      { title: "File Processing", href: "/file-processing" },
+      { title: "Forms", href: "/forms" },
+      { title: "Hooks", href: "/hooks" },
+      { title: "State Management", href: "/state-management" },
+    ],
+  },
+  {
+    title: "Development Tools",
+    href: "/website/development-tools",
+    noLink: true,
+    items: [
+      { title: "TypeScript", href: "/typescript" },
+      { title: "Testing", href: "/testing" },
+      { title: "Performance", href: "/performance" },
+      { title: "Deployment", href: "/deployment" },
     ],
   },
 ];

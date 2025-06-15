@@ -1,0 +1,369 @@
+# Authentication Architecture 🏗️
+
+## Overview
+
+The **Edukai Authentication Architecture** implements a modern, secure frontend authentication system with JWT tokens, session management, and comprehensive route protection. The architecture follows React best practices with TypeScript safety and integrates seamlessly with the Node.js backend.
+
+## System Architecture
+
+### 🔄 **Authentication Flow Diagram**
+
+```
+Frontend Authentication Flow
+┌─────────────────────────────────────────────────────────────┐
+│                    Authentication Layer                     │
+├─────────────────────────────────────────────────────────────┤
+│  UI Components  │  Hooks & Logic  │  Services & Storage    │
+│  ─────────────  │  ─────────────  │  ─────────────────────  │
+│  • AuthContainer│  • useSession   │  • AuthService         │
+│  • SigninForm   │  • useAuthGuard │  • SessionStorage      │
+│  • SignupForm   │  • Custom Hooks │  • API Communication   │
+│  • AuthGuard    │  • State Mgmt   │  • Token Management    │
+├─────────────────────────────────────────────────────────────┤
+│                    Backend Integration                      │
+│  • RESTful API endpoints (/auth/login, /auth/register)     │
+│  • JWT token-based authentication                          │
+│  • Session validation and refresh                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🏛️ **Architectural Layers**
+
+#### **1. Presentation Layer (UI Components)**
+
+- **AuthContainer**: Main authentication orchestrator
+- **Form Components**: SigninForm, SignupForm, ResetPasswordForm
+- **Protection Components**: AuthGuard for route protection
+- **Auth Page**: Beautiful, responsive authentication interface
+
+#### **2. Business Logic Layer (Hooks & State)**
+
+- **useSession**: Central session management and auth state
+- **useAuthGuard**: Route protection and redirect logic
+- **Custom Hooks**: Specialized authentication behaviors
+- **State Management**: React state with TypeScript safety
+
+#### **3. Service Layer (API & Storage)**
+
+- **AuthService**: Backend API communication
+- **SessionStorage**: Client-side session persistence
+- **Token Management**: JWT token handling and refresh
+- **Error Handling**: Comprehensive error management
+
+#### **4. Integration Layer (Backend Communication)**
+
+- **RESTful Endpoints**: Standard HTTP API communication
+- **JWT Authentication**: Token-based security
+- **Session Validation**: Automatic token refresh and validation
+
+## File Structure & Organization
+
+### 📁 **Complete File Structure**
+
+```
+Authentication System (12 files, ~1,200 lines)
+├── 📁 services/
+│   └── auth.ts                    # API service layer (100 lines)
+├── 📁 lib/
+│   ├── session.ts                 # Session storage management (65 lines)
+│   ├── auth-utils.ts              # Auth utility functions (38 lines)
+│   ├── auth.ts                    # Re-exports for convenience (2 lines)
+│   ├── schemas/auth.ts            # Zod validation schemas (78 lines)
+│   └── actions/auth.ts            # Server actions (159 lines)
+├── 📁 hooks/
+│   ├── useSession.ts              # Session management hook (117 lines)
+│   └── useAuthGuard.ts            # Route protection hook (32 lines)
+├── 📁 components/auth/
+│   ├── auth-container.tsx         # Main auth container (111 lines)
+│   ├── AuthGuard.tsx              # Route protection component (38 lines)
+│   ├── signin-form.tsx            # Login form component
+│   ├── signup-form.tsx            # Registration form component
+│   └── reset-password-form.tsx    # Password reset form
+└── 📁 app/(auth)/
+    └── auth/page.tsx              # Auth page with UI (224 lines)
+```
+
+### 🔗 **Component Dependencies**
+
+```
+Dependency Graph
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Auth Page     │───▶│ AuthContainer   │───▶│  Form Components│
+│  (224 lines)    │    │  (111 lines)    │    │  (signin/signup)│
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   useSession    │◀───│  AuthService    │◀───│ Zod Schemas     │
+│  (117 lines)    │    │  (100 lines)    │    │  (78 lines)     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ SessionStorage  │    │ Backend API     │    │ Error Handling  │
+│  (65 lines)     │    │ (Node.js)       │    │ & Toasts        │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+## Design Patterns
+
+### 🎯 **Authentication Patterns Used**
+
+#### **1. Service Layer Pattern**
+
+```typescript
+// Centralized API communication
+export function useAuthService(): AuthService {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  return {
+    login: async (credentials) => {
+      /* API call */
+    },
+    register: async (userData) => {
+      /* API call */
+    },
+    logout: async () => {
+      /* API call */
+    },
+    refreshToken: async () => {
+      /* API call */
+    },
+  };
+}
+```
+
+#### **2. Custom Hook Pattern**
+
+```typescript
+// Centralized auth state management
+export function useSession() {
+  const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState(true);
+
+  return { user, loading, login, register, logout };
+}
+```
+
+#### **3. Higher-Order Component Pattern**
+
+```typescript
+// Route protection wrapper
+export function withAuth<P extends object>(Component: React.ComponentType<P>) {
+  return function AuthenticatedComponent(props: P) {
+    const { user, loading } = useAuthGuard();
+    if (!user) return null;
+    return <Component {...props} />;
+  };
+}
+```
+
+#### **4. Container/Presenter Pattern**
+
+```typescript
+// AuthContainer manages state, forms handle presentation
+export function AuthContainer({ initialMode, onAuthSuccess }) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+
+  return (
+    <div>
+      {mode === "login" && <SigninForm onSuccess={onAuthSuccess} />}
+      {mode === "register" && <SignupForm onSuccess={onAuthSuccess} />}
+    </div>
+  );
+}
+```
+
+## Security Architecture
+
+### 🔐 **Security Layers**
+
+#### **1. Client-Side Security**
+
+- **Input Validation**: Zod schemas with comprehensive validation
+- **XSS Prevention**: Proper data sanitization and encoding
+- **Session Management**: Secure token storage with cleanup
+- **Route Protection**: Automatic redirect for unauthorized access
+
+#### **2. Communication Security**
+
+- **HTTPS Only**: Secure communication with backend
+- **CSRF Protection**: withCredentials for cookie-based protection
+- **Token Transmission**: Secure JWT token handling
+- **Error Sanitization**: Safe error message display
+
+#### **3. Storage Security**
+
+- **localStorage**: Client-side token persistence
+- **Data Validation**: Token and user data validation
+- **Automatic Cleanup**: Invalid session data removal
+- **SSR Safety**: Client-side only operations
+
+### 🛡️ **Security Implementation**
+
+```typescript
+// Secure API configuration
+const response = await axios.post(`${apiUrl}/auth/login`, credentials, {
+  withCredentials: true, // CSRF protection
+});
+
+// Secure token validation
+const token = sessionStorage.getToken();
+if (token && token !== "undefined" && token !== "null") {
+  // Use validated token
+}
+
+// Automatic session cleanup
+sessionStorage.cleanupInvalidData();
+```
+
+## Data Flow Architecture
+
+### 🔄 **Authentication Data Flow**
+
+```
+User Authentication Flow
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    User     │───▶│    Form     │───▶│   Service   │───▶│   Backend   │
+│   Input     │    │ Validation  │    │    Layer    │    │     API     │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                            │                 │                 │
+                            ▼                 ▼                 ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    UI       │◀───│   Session   │◀───│   Token     │◀───│  Response   │
+│  Update     │    │   Storage   │    │ Management  │    │   Handler   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+### 📊 **State Management Flow**
+
+```
+React State Management
+┌─────────────────┐
+│   useSession    │ ← Central auth state hook
+├─────────────────┤
+│ • user: User    │ ← Current authenticated user
+│ • loading: bool │ ← Loading state indicator
+│ • login()       │ ← Authentication action
+│ • logout()      │ ← Session termination
+│ • register()    │ ← User registration
+└─────────────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│ SessionStorage  │    │   AuthService   │
+├─────────────────┤    ├─────────────────┤
+│ • setToken()    │    │ • login()       │
+│ • getToken()    │    │ • register()    │
+│ • setUser()     │    │ • logout()      │
+│ • getUser()     │    │ • refreshToken()│
+│ • clearSession()│    └─────────────────┘
+└─────────────────┘
+```
+
+## Integration Points
+
+### 🔌 **Backend Integration**
+
+#### **API Endpoints**
+
+- **POST** `/auth/login` - User authentication
+- **POST** `/auth/register` - User registration
+- **POST** `/auth/logout` - Session termination
+- **POST** `/auth/refresh` - Token refresh
+
+#### **Request/Response Format**
+
+```typescript
+// Login Request
+interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+// Auth Response
+interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+```
+
+### 🌐 **Frontend Integration**
+
+#### **Route Protection**
+
+```typescript
+// Page-level protection
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
+
+// Component-level protection
+const ProtectedComponent = withAuth(MyComponent);
+```
+
+#### **State Integration**
+
+```typescript
+// Component auth state usage
+function UserProfile() {
+  const { user, logout } = useSession();
+
+  if (!user) return <LoginPrompt />;
+
+  return (
+    <div>
+      <h1>Welcome, {user.firstName}!</h1>
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+```
+
+## Performance Considerations
+
+### ⚡ **Optimization Strategies**
+
+#### **1. Lazy Loading**
+
+- Auth components loaded on demand
+- Form components split by route
+- Reduced initial bundle size
+
+#### **2. Session Persistence**
+
+- localStorage for token persistence
+- Minimize API calls on page refresh
+- Automatic session validation
+
+#### **3. Error Boundaries**
+
+- Prevent auth errors from crashing app
+- Graceful error handling and recovery
+- User-friendly error messages
+
+#### **4. Memory Management**
+
+- Proper cleanup on component unmount
+- Session data validation and cleanup
+- Efficient state updates
+
+---
+
+**Navigation**:
+
+- 🏠 **[Authentication Overview](./overview.md)** - Complete authentication documentation
+- 🎨 **[Components](./components.md)** - Authentication UI components
+- 🔗 **[Services](./services.md)** - API service layer
+- 💾 **[Session Management](./session.md)** - Session and storage management
+- 🛡️ **[Security](./security.md)** - Security features and best practices

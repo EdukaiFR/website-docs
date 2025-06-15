@@ -1,0 +1,269 @@
+# Authentication System - Frontend Implementation 🔐
+
+## Overview
+
+The **Edukai Authentication System** provides a complete frontend authentication solution with secure session management, form validation, and seamless user experience. The system handles login, registration, password management, and protected routes while communicating with a Node.js backend API.
+
+## Documentation Structure
+
+This authentication documentation is organized into focused sections for comprehensive coverage:
+
+### 📚 **Documentation Sections**
+
+- **[🏗️ Architecture](./architecture.md)** - System architecture, design patterns, and data flow
+- **[🎨 Components](./components.md)** - UI components, forms, and page implementations
+- **[🔗 Services](./services.md)** - API service layer and backend communication
+- **[💾 Session Management](./session.md)** - Session storage, hooks, and state management
+- **[🛡️ Security](./security.md)** - Security features, best practices, and protection measures
+
+## Quick Reference
+
+### 🎯 **Key Features**
+
+- **Complete Authentication Flow**: Login, registration, password reset, and logout
+- **Secure Session Management**: JWT tokens with automatic refresh and validation
+- **Route Protection**: AuthGuard components and useAuthGuard hooks
+- **Form Validation**: Zod schemas with French localization and security rules
+- **Error Handling**: Comprehensive error management with user-friendly messages
+- **Responsive Design**: Mobile-first UI with modern glass morphism design
+- **TypeScript Safety**: Full type safety throughout the authentication flow
+
+### 📊 **System Metrics**
+
+| Component           | File                                 | Lines | Purpose                    |
+| ------------------- | ------------------------------------ | ----- | -------------------------- |
+| **AuthContainer**   | `components/auth/auth-container.tsx` | 111   | Main auth orchestrator     |
+| **useSession**      | `hooks/useSession.ts`                | 117   | Central session management |
+| **AuthService**     | `services/auth.ts`                   | 100   | API communication layer    |
+| **Session Storage** | `lib/session.ts`                     | 65    | Client-side storage        |
+| **Auth Schemas**    | `lib/schemas/auth.ts`                | 78    | Form validation            |
+| **Auth Page**       | `app/(auth)/auth/page.tsx`           | 224   | Beautiful auth interface   |
+
+**Total**: 12 files, ~1,200 lines of authentication code
+
+### 🔄 **Authentication Flow**
+
+```
+User Journey
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    Visit    │───▶│    Auth     │───▶│   Login/    │───▶│ Dashboard   │
+│  Protected  │    │    Page     │    │  Register   │    │   Access    │
+│    Route    │    │             │    │             │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+       │                  │                  │                  │
+       ▼                  ▼                  ▼                  ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│ AuthGuard   │    │ AuthContainer│    │ useSession  │    │ Protected   │
+│ Redirect    │    │ Form Switch │    │ API Call    │    │ Content     │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+### 🛠️ **Core Technologies**
+
+- **React 18**: Modern React with hooks and concurrent features
+- **TypeScript**: Full type safety and developer experience
+- **Zod**: Schema validation with type inference
+- **Axios**: HTTP client with interceptors and security
+- **Tailwind CSS**: Utility-first styling with responsive design
+- **Next.js 14**: App Router with SSR-safe implementations
+
+## Getting Started
+
+### 🚀 **For New Developers**
+
+1. **[Architecture Overview](./architecture.md)** - Understand the system design
+2. **[Components Guide](./components.md)** - Learn the UI components
+3. **[Session Management](./session.md)** - Understand state handling
+
+### 🔧 **For Feature Development**
+
+1. **[Services Documentation](./services.md)** - API integration patterns
+2. **[Security Guidelines](./security.md)** - Security best practices
+3. **[Components Reference](./components.md)** - Reusable components
+
+### 🛡️ **For Security Review**
+
+1. **[Security Features](./security.md)** - Comprehensive security measures
+2. **[Session Security](./session.md)** - Storage and validation security
+3. **[Architecture Security](./architecture.md)** - System-level security
+
+## Implementation Examples
+
+### 🔌 **Basic Usage**
+
+```typescript
+// 1. Protect a page with AuthGuard
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
+
+// 2. Use authentication state
+function UserProfile() {
+  const { user, logout } = useSession();
+
+  return (
+    <div>
+      <h1>Welcome, {user?.firstName}!</h1>
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+
+// 3. Create custom auth forms
+function CustomLoginForm() {
+  const { login } = useSession();
+
+  const handleSubmit = async (credentials) => {
+    const result = await login(credentials);
+    if (result.success) {
+      router.push("/dashboard");
+    }
+  };
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+### 🎨 **Component Integration**
+
+```typescript
+// AuthContainer with custom callbacks
+<AuthContainer
+  initialMode="login"
+  onAuthSuccess={() => router.push('/dashboard')}
+  onAuthError={(error) => showToast.error(error)}
+/>
+
+// AuthGuard with custom redirect
+<AuthGuard
+  redirectTo="/login"
+  fallback={<CustomLoadingSpinner />}
+>
+  <ProtectedContent />
+</AuthGuard>
+```
+
+### 🔗 **Service Integration**
+
+```typescript
+// Using auth service directly
+const authService = useAuthService();
+
+const handleLogin = async (credentials) => {
+  try {
+    const response = await authService.login(credentials);
+    sessionStorage.setToken(response.token);
+    sessionStorage.setUser(response.user);
+  } catch (error) {
+    console.error("Login failed:", error);
+  }
+};
+```
+
+## Key Concepts
+
+### 🎯 **Authentication Patterns**
+
+- **Service Layer Pattern**: Centralized API communication
+- **Custom Hook Pattern**: Reusable authentication logic
+- **Higher-Order Component**: Route protection wrapper
+- **Container/Presenter**: Separation of logic and UI
+
+### 🔐 **Security Principles**
+
+- **Defense in Depth**: Multiple security layers
+- **Input Validation**: Comprehensive data validation
+- **Secure Storage**: Safe client-side session management
+- **Error Handling**: Secure error messages and logging
+
+### 💾 **Session Management**
+
+- **Persistent Storage**: localStorage for cross-session persistence
+- **State Synchronization**: React state with storage sync
+- **Automatic Cleanup**: Invalid data removal
+- **Token Validation**: JWT format and expiration checks
+
+## Best Practices
+
+### ✅ **Security Best Practices**
+
+```typescript
+// Always validate tokens
+const token = sessionStorage.getToken();
+if (token && token !== "undefined" && token !== "null") {
+  // Use validated token
+}
+
+// Clean up invalid session data
+sessionStorage.cleanupInvalidData();
+
+// Handle errors gracefully
+try {
+  const response = await authService.login(credentials);
+} catch (error) {
+  const errorMessage = translateApiError(error.response?.data?.message);
+  authToast.loginError(errorMessage);
+}
+```
+
+### 🎨 **Component Best Practices**
+
+```typescript
+// Use AuthGuard for protection
+<AuthGuard redirectTo="/auth">
+  <ProtectedComponent />
+</AuthGuard>;
+
+// Handle loading states
+const { user, loading } = useSession();
+if (loading) return <LoadingSpinner />;
+
+// Use Zod for validation
+const form = useForm<SigninFormValues>({
+  resolver: zodResolver(signinSchema),
+});
+```
+
+### ⚡ **Performance Best Practices**
+
+- **Lazy Loading**: Load auth components on demand
+- **Memoization**: Cache expensive calculations
+- **Session Persistence**: Minimize API calls
+- **Error Boundaries**: Prevent auth errors from crashing app
+
+## Troubleshooting
+
+### 🔍 **Common Issues**
+
+1. **Session Not Persisting**: Check localStorage and token validation
+2. **Redirect Loops**: Verify AuthGuard configuration and user state
+3. **Form Validation Errors**: Check Zod schema definitions
+4. **API Communication**: Verify environment variables and CORS settings
+
+### 🛠️ **Debug Tools**
+
+```typescript
+// Debug session state
+console.log("User:", sessionStorage.getUser());
+console.log("Token:", sessionStorage.getToken());
+console.log("Is Authenticated:", isAuthenticated());
+
+// Debug auth flow
+const { user, loading } = useSession();
+console.log("Auth State:", { user, loading });
+```
+
+---
+
+**Navigation**:
+
+- 🏠 **[Frontend Documentation Home](../README.md)**
+- 🏗️ **[Architecture](./architecture.md)** - System design and patterns
+- 🎨 **[Components](./components.md)** - UI components and forms
+- 🔗 **[Services](./services.md)** - API service layer
+- 💾 **[Session Management](./session.md)** - Session and storage
+- 🛡️ **[Security](./security.md)** - Security features and best practices

@@ -1,0 +1,82 @@
+# Project Structure Overview - Edukai Frontend 📁
+
+## Overview
+
+The Edukai frontend is built with **Next.js 14** using the modern App Router architecture. This documentation is organized into specific sections for better navigation and maintenance.
+
+## Documentation Structure
+
+### 🏗️ Architecture
+
+- **[Overview](./architecture/overview.md)** - High-level architecture explanation
+- **[App Router](./architecture/app-router.md)** - Next.js App Router structure and patterns
+- **[Design Patterns](./architecture/patterns.md)** - Key architectural patterns used
+
+### 📁 Project Structure
+
+- **[Components](./structure/components.md)** - Component organization and directory structure
+- **[Services](./structure/services.md)** - API service layer organization
+- **[Hooks](./structure/hooks.md)** - Custom React hooks structure
+- **[Lib Directory](./structure/lib.md)** - Utilities, schemas, and types organization
+
+### ⚙️ Configuration
+
+- **[Configuration Files](./configuration/files.md)** - All configuration files and their purposes
+- **[TypeScript Setup](./configuration/typescript.md)** - TypeScript configuration and patterns
+- **[Tailwind CSS](./configuration/tailwind.md)** - Styling configuration and setup
+
+### 👨‍💻 Development
+
+- **[Workflows](./development/workflows.md)** - Development processes and workflows
+- **[Conventions](./development/conventions.md)** - Naming conventions and standards
+- **[Best Practices](./development/best-practices.md)** - Code quality and best practices
+
+## Quick Reference
+
+### Root Directory Structure
+
+```
+📁 Edukai Frontend
+├── 📁 app/                       # Next.js App Router pages and layouts
+├── 📁 components/                # Reusable React components
+├── 📁 docs/                      # Project documentation
+├── 📁 hooks/                     # Custom React hooks
+├── 📁 lib/                       # Utility functions and configurations
+├── 📁 services/                  # API service layer
+├── 📄 package.json               # Project dependencies and scripts
+├── 📄 tailwind.config.ts         # Tailwind CSS configuration
+├── 📄 tsconfig.json              # TypeScript configuration
+└── 📄 next.config.mjs            # Next.js configuration
+```
+
+### Key Directories
+
+- **`app/`** - Next.js App Router with `(auth)` and `(dashboard)` route groups
+- **`components/`** - UI components organized by feature with ShadCN base components
+- **`services/`** - Frontend API service layer communicating with Node.js backend
+- **`hooks/`** - Custom React hooks for business logic
+- **`lib/`** - Utilities, schemas, types, and configurations
+
+### Critical Files
+
+| File                                 | Purpose                | Lines | Importance |
+| ------------------------------------ | ---------------------- | ----- | ---------- |
+| `app/(dashboard)/page.tsx`           | Main dashboard page    | 278   | High       |
+| `components/navigation-location.tsx` | Navigation system      | 284   | High       |
+| `components/ui/sidebar.tsx`          | Main sidebar component | 774   | High       |
+| `services/course.ts`                 | Course API service     | 183   | High       |
+| `hooks/useQuiz.ts`                   | Quiz functionality     | 130   | High       |
+
+## Getting Started
+
+1. **For Architecture Understanding**: Start with [Architecture Overview](./architecture/overview.md)
+2. **For Component Development**: Read [Components Structure](./structure/components.md)
+3. **For API Integration**: Check [Services Organization](./structure/services.md)
+4. **For Development Setup**: Follow [Development Workflows](./development/workflows.md)
+
+## Navigation
+
+- 📚 **[Back to Documentation Plan](../DOCUMENTATION_ACTION_PLAN.md)**
+- 🏗️ **[Architecture Overview](./architecture/overview.md)** - Start here for high-level understanding
+- 📁 **[Components Structure](./structure/components.md)** - UI component organization
+- ⚙️ **[Configuration Files](./configuration/files.md)** - Setup and configuration details

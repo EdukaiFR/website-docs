@@ -1,0 +1,138 @@
+# Frontend Documentation - Edukai Project 📚
+
+## Overview
+
+**Edukai Frontend** is a Next.js 14 application that provides the user interface for an AI-powered educational platform. The frontend handles quiz generation, course management, user authentication, and file processing, while communicating with a separate Node.js backend API.
+
+## Documentation Structure
+
+The documentation is organized into focused sections, each in its own folder for better organization and navigation.
+
+### 🏗️ **Project Architecture**
+
+- **[Project Structure](./project-structure/overview.md)** - Complete project organization and directory structure
+- **[Architecture Overview](./project-structure/architecture.md)** - High-level architecture, patterns, and data flow
+
+### 🔗 **API & Services**
+
+- **[API Services](./api-services/overview.md)** - Frontend API service layer and backend communication
+- **[Authentication](./authentication/overview.md)** - Frontend authentication implementation and flow
+
+### 🎨 **UI & Components**
+
+- **[Components](./components/overview.md)** - Component organization, patterns, and structure
+- **[Navigation](./navigation/overview.md)** - Navigation system and routing implementation
+- **[Design System](./design-system/overview.md)** - UI design system, Tailwind, and styling patterns
+
+### ⚙️ **Core Features**
+
+- **[Quiz System](./quiz-system/overview.md)** - Quiz frontend implementation and UI flow
+- **[Course Management](./course-management/overview.md)** - Course-related frontend features and UI
+- **[File Processing](./file-processing/overview.md)** - File upload, OCR, and processing features
+
+### 🔧 **Development Tools**
+
+- **[Custom Hooks](./hooks/overview.md)** - React hooks organization and implementation
+- **[State Management](./state-management/overview.md)** - State management patterns and practices
+- **[Forms](./forms/overview.md)** - Form handling, validation, and patterns
+
+### 🎭 **User Experience**
+
+- **[Loading & UX](./loading-ux/overview.md)** - Loading states, animations, and user feedback
+- **[Performance](./performance/overview.md)** - Frontend performance optimization techniques
+
+### 👨‍💻 **Development Environment**
+
+- **[Development Setup](./development/configuration.md)** - Configuration files and development environment
+- **[TypeScript](./typescript/overview.md)** - TypeScript configuration and patterns
+- **[Testing](./testing/overview.md)** - Frontend testing strategies and implementation
+- **[Deployment](./deployment/overview.md)** - Frontend deployment processes and setup
+
+## Quick Reference
+
+### Project Tech Stack
+
+- **Framework**: Next.js 14.2.16 with React 18
+- **Language**: TypeScript with strict typing
+- **Styling**: Tailwind CSS with ShadCN UI components
+- **State**: Custom hooks with React state
+- **API**: Axios for backend communication
+- **File Processing**: Tesseract.js for OCR capabilities
+
+### Key Directories
+
+```
+📁 Edukai Frontend
+├── 📁 app/                       # Next.js App Router (auth & dashboard)
+├── 📁 components/                # UI components (30+ ShadCN components)
+├── 📁 services/                  # API service layer (4 services)
+├── 📁 hooks/                     # Custom React hooks (7 hooks)
+├── 📁 lib/                       # Utils, schemas, types, actions
+└── 📁 docs/frontend/             # This documentation
+```
+
+### Critical Files Overview
+
+| File                                   | Purpose            | Lines | Section                                              |
+| -------------------------------------- | ------------------ | ----- | ---------------------------------------------------- |
+| `app/(dashboard)/page.tsx`             | Main dashboard     | 278   | [Project Structure](./project-structure/overview.md) |
+| `components/navigation-location.tsx`   | Navigation system  | 284   | [Navigation](./navigation/overview.md)               |
+| `components/ui/sidebar.tsx`            | Main sidebar       | 774   | [Components](./components/overview.md)               |
+| `services/course.ts`                   | Course API service | 183   | [API Services](./api-services/overview.md)           |
+| `hooks/useQuiz.ts`                     | Quiz functionality | 130   | [Custom Hooks](./hooks/overview.md)                  |
+| `components/generator/file-upload.tsx` | File processing    | 250   | [File Processing](./file-processing/overview.md)     |
+
+## Getting Started
+
+### For New Developers
+
+1. **[Project Structure](./project-structure/overview.md)** - Understand the overall organization
+2. **[Development Setup](./development/configuration.md)** - Set up your development environment
+3. **[Components](./components/overview.md)** - Learn the component patterns
+
+### For Feature Development
+
+1. **[API Services](./api-services/overview.md)** - Understand backend communication
+2. **[Custom Hooks](./hooks/overview.md)** - Learn business logic patterns
+3. **[State Management](./state-management/overview.md)** - Understand state patterns
+
+### For UI/UX Work
+
+1. **[Design System](./design-system/overview.md)** - Learn the design patterns
+2. **[Components](./components/overview.md)** - Understand component architecture
+3. **[Loading & UX](./loading-ux/overview.md)** - Learn UX patterns
+
+### For DevOps/Deployment
+
+1. **[Development Setup](./development/configuration.md)** - Environment configuration
+2. **[Performance](./performance/overview.md)** - Optimization techniques
+3. **[Deployment](./deployment/overview.md)** - Deployment processes
+
+## Documentation Standards
+
+Each section follows consistent standards:
+
+- **Overview files** provide comprehensive coverage of their topic
+- **Code examples** reference actual project files
+- **Best practices** are highlighted throughout
+- **Navigation links** connect related sections
+- **Real metrics** from the actual codebase
+
+## Contributing to Documentation
+
+When adding new documentation:
+
+1. Create files in the appropriate section folder
+2. Follow the naming convention: `overview.md` or descriptive names
+3. Update this README with navigation links
+4. Reference actual code files and examples
+5. Include cross-references to related sections
+
+---
+
+**Navigation**:
+
+- 📚 **[Back to Main Documentation](../DOCUMENTATION_ACTION_PLAN.md)**
+- 🏗️ **[Start with Project Structure](./project-structure/overview.md)**
+- 🔗 **[API Services](./api-services/overview.md)**
+- 🎨 **[Components](./components/overview.md)**

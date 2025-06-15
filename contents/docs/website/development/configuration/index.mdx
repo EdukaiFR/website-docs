@@ -1,0 +1,579 @@
+# Configuration Files - Edukai Frontend ⚙️
+
+## Overview
+
+The Edukai frontend uses multiple configuration files to set up the development environment, build process, styling, and type checking. Each configuration file serves a specific purpose in the application architecture.
+
+## Configuration Files Structure
+
+```
+📁 Root Configuration Files
+├── 📄 package.json              # Dependencies and scripts
+├── 📄 tailwind.config.ts        # Tailwind CSS configuration
+├── 📄 tsconfig.json             # TypeScript configuration
+├── 📄 next.config.mjs           # Next.js configuration
+├── 📄 components.json           # ShadCN UI configuration
+├── 📄 postcss.config.mjs        # PostCSS configuration
+├── 📄 .gitignore                # Git ignore patterns
+├── 📄 Dockerfile                # Docker container configuration
+├── 📄 pnpm-lock.yaml           # PNPM lock file
+└── 📄 package-lock.json         # NPM lock file
+```
+
+## Package.json - Project Configuration
+
+### Dependencies Overview
+
+```json
+{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "dev:clean": "rm -rf .next && pnpm dev",
+    "reset": "pkill -f 'next dev' 2>/dev/null || true && rm -rf .next && pnpm dev"
+  }
+}
+```
+
+### Key Dependencies Categories
+
+#### **Framework & Core**
+
+```json
+{
+  "next": "14.2.16", // Next.js framework
+  "react": "^18", // React library
+  "react-dom": "^18", // React DOM
+  "typescript": "^5.6.3" // TypeScript support
+}
+```
+
+#### **UI & Styling**
+
+```json
+{
+  "@radix-ui/react-*": "^1.x", // Radix UI primitives (15+ components)
+  "tailwindcss": "^3.4.1", // Utility-first CSS framework
+  "tailwindcss-animate": "^1.0.7", // Tailwind animations
+  "tailwind-merge": "^2.5.4", // Tailwind class merging
+  "class-variance-authority": "^0.7.0", // Component variants
+  "clsx": "^2.1.1", // Conditional classes
+  "lucide-react": "^0.460.0", // Icon library
+  "next-themes": "^0.4.3" // Theme management
+}
+```
+
+#### **Forms & Validation**
+
+```json
+{
+  "react-hook-form": "^7.53.2", // Form handling
+  "@hookform/resolvers": "^3.9.1", // Form resolvers
+  "zod": "^3.23.8" // Schema validation
+}
+```
+
+#### **Data & API**
+
+```json
+{
+  "axios": "^1.7.7", // HTTP client
+  "@tanstack/react-table": "^8.20.6", // Table management
+  "date-fns": "^2.28.0" // Date utilities
+}
+```
+
+#### **UI Enhancement**
+
+```json
+{
+  "sonner": "^2.0.1", // Toast notifications
+  "cmdk": "1.0.0", // Command palette
+  "react-day-picker": "8.10.1", // Date picker
+  "react-loading-skeleton": "^3.5.0" // Loading skeletons
+}
+```
+
+#### **File Processing**
+
+```json
+{
+  "tesseract.js": "^5.1.1", // OCR text recognition
+  "jszip": "^3.10.1" // ZIP file handling
+}
+```
+
+### Development Scripts
+
+```bash
+# Development
+pnpm dev          # Start development server
+pnpm dev:clean    # Clean build and start dev
+pnpm reset        # Kill processes, clean, and restart
+
+# Production
+pnpm build        # Build for production
+pnpm start        # Start production server
+
+# Quality
+pnpm lint         # Run ESLint
+```
+
+## TypeScript Configuration (`tsconfig.json`)
+
+### Configuration Overview
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "es6"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+### Key Configuration Explanations
+
+#### **Strict Type Checking**
+
+- `"strict": true` - Enables all strict type checking options
+- `"noEmit": true` - Only type check, don't emit JavaScript
+- `"skipLibCheck": true` - Skip type checking of declaration files
+
+#### **Module Resolution**
+
+- `"moduleResolution": "bundler"` - Use bundler-style resolution
+- `"esModuleInterop": true` - Enable ES module interoperability
+- `"isolatedModules": true` - Ensure each file is a module
+
+#### **Path Mapping**
+
+```json
+{
+  "paths": {
+    "@/*": ["./*"] // Absolute imports from root
+  }
+}
+```
+
+Enables clean imports:
+
+```typescript
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+```
+
+## Tailwind CSS Configuration (`tailwind.config.ts`)
+
+### Complete Configuration
+
+```typescript
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: ["class"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
+  prefix: "",
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+};
+
+export default config;
+```
+
+### Key Configuration Features
+
+#### **Dark Mode Support**
+
+```typescript
+darkMode: ["class"]; // Class-based dark mode
+```
+
+#### **Content Sources**
+
+```typescript
+content: [
+  "./pages/**/*.{ts,tsx}", // Legacy pages
+  "./components/**/*.{ts,tsx}", // All components
+  "./app/**/*.{ts,tsx}", // App router pages
+  "./src/**/*.{ts,tsx}", // Source files
+];
+```
+
+#### **CSS Custom Properties Integration**
+
+Uses CSS variables for theme consistency:
+
+```css
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  /* ... more variables */
+}
+```
+
+## Next.js Configuration (`next.config.mjs`)
+
+### Basic Configuration
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+export default nextConfig;
+```
+
+### Extended Configuration Example
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Image optimization
+  images: {
+    domains: ["example.com"],
+    formats: ["image/webp", "image/avif"],
+  },
+
+  // Experimental features
+  experimental: {
+    serverActions: true,
+    typedRoutes: true,
+  },
+
+  // Environment variables
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY,
+  },
+
+  // Webpack customization
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Custom webpack config
+    return config;
+  },
+
+  // Redirects and rewrites
+  async redirects() {
+    return [
+      {
+        source: "/old-path",
+        destination: "/new-path",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+## ShadCN UI Configuration (`components.json`)
+
+### Configuration Structure
+
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "app/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  }
+}
+```
+
+### Configuration Explanations
+
+- `"rsc": true` - React Server Components support
+- `"tsx": true` - TypeScript with JSX
+- `"cssVariables": true` - Use CSS variables for theming
+- `"baseColor": "slate"` - Base color palette
+
+## PostCSS Configuration (`postcss.config.mjs`)
+
+### Configuration
+
+```javascript
+/** @type {import('postcss-load-config').Config} */
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
+```
+
+### Plugin Functions
+
+- **Tailwind CSS**: Processes utility classes
+- **Autoprefixer**: Adds vendor prefixes for browser compatibility
+
+## Docker Configuration (`Dockerfile`)
+
+### Container Setup
+
+```dockerfile
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+RUN \
+  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Production build
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+
+CMD ["node", "server.js"]
+```
+
+## Environment Configuration
+
+### Environment Variables Structure
+
+```bash
+# .env.local (development)
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_AUTH_COOKIE_NAME=auth_token
+NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=localhost
+
+# .env.production (production)
+NEXT_PUBLIC_API_URL=https://api.edukai.com
+NEXT_PUBLIC_AUTH_COOKIE_NAME=auth_token
+NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=.edukai.com
+```
+
+### Environment Variable Categories
+
+#### **Public Variables** (Available in browser)
+
+- `NEXT_PUBLIC_API_URL` - Backend API URL
+- `NEXT_PUBLIC_AUTH_COOKIE_NAME` - Authentication cookie name
+- `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` - Cookie domain
+
+#### **Server-only Variables**
+
+- `DATABASE_URL` - Database connection string
+- `JWT_SECRET` - JWT signing secret
+- `API_SECRET_KEY` - API authentication key
+
+## Git Configuration (`.gitignore`)
+
+### Ignore Patterns
+
+```gitignore
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+
+# Environment variables
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+*.tsbuildinfo
+```
+
+## Configuration Best Practices
+
+### 1. **Environment-Specific Configuration**
+
+```typescript
+// lib/config.ts
+export const config = {
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+  isDevelopment: process.env.NODE_ENV === "development",
+  isProduction: process.env.NODE_ENV === "production",
+};
+```
+
+### 2. **Type-Safe Configuration**
+
+```typescript
+// lib/env.ts
+import { z } from "zod";
+
+const envSchema = z.object({
+  NEXT_PUBLIC_API_URL: z.string().url(),
+  NEXT_PUBLIC_AUTH_COOKIE_NAME: z.string(),
+  NODE_ENV: z.enum(["development", "test", "production"]),
+});
+
+export const env = envSchema.parse(process.env);
+```
+
+### 3. **Feature Flags**
+
+```typescript
+// lib/features.ts
+export const features = {
+  enableNewDashboard: process.env.NEXT_PUBLIC_ENABLE_NEW_DASHBOARD === "true",
+  enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
+  enableBetaFeatures: process.env.NODE_ENV === "development",
+};
+```
+
+## Configuration File Purposes Summary
+
+| File                 | Purpose                  | Environment | Critical  |
+| -------------------- | ------------------------ | ----------- | --------- |
+| `package.json`       | Dependencies and scripts | All         | ✅ High   |
+| `tsconfig.json`      | TypeScript settings      | Development | ✅ High   |
+| `tailwind.config.ts` | Styling configuration    | All         | ✅ High   |
+| `next.config.mjs`    | Next.js settings         | All         | ✅ High   |
+| `components.json`    | ShadCN UI settings       | Development | 🔶 Medium |
+| `postcss.config.mjs` | CSS processing           | Build       | 🔶 Medium |
+| `Dockerfile`         | Container setup          | Production  | 🔶 Medium |
+
+This configuration setup provides a robust foundation for development, building, and deployment of the Edukai frontend application.

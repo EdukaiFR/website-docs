@@ -1,6 +1,7 @@
 import { compileMDX } from "next-mdx-remote/rsc";
 import path from "path";
 import { promises as fs } from "fs";
+import { accessSync } from "fs";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism-plus";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
@@ -82,8 +83,12 @@ export async function getDocsTocs(slug: string) {
   const extractedHeadings = [];
   while ((match = headingsRegex.exec(rawMdx)) !== null) {
     const headingLevel = match[1].length;
-    const headingText = match[2].trim();
-    const slug = sluggify(headingText);
+    let headingText = match[2].trim();
+    // Remove markdown formatting from TOC display text
+    headingText = headingText.replace(/\*\*(.*?)\*\*/g, "$1"); // Remove **bold**
+    headingText = headingText.replace(/\*(.*?)\*/g, "$1"); // Remove *italic*
+    headingText = headingText.replace(/`(.*?)`/g, "$1"); // Remove `code`
+    const slug = sluggify(match[2].trim()); // Use original text for slug generation
     extractedHeadings.push({
       level: headingLevel,
       text: headingText,
@@ -107,7 +112,28 @@ function sluggify(text: string) {
 }
 
 function getDocsContentPath(slug: string) {
-  return path.join(process.cwd(), "/contents/docs/", `${slug}/index.mdx`);
+  const basePath = path.join(process.cwd(), "/contents/docs/");
+
+  // Try different path patterns
+  const possiblePaths = [
+    path.join(basePath, `${slug}.mdx`), // Direct file .mdx
+    path.join(basePath, `${slug}.md`), // Direct file .md
+    path.join(basePath, `${slug}/index.mdx`), // Index file .mdx
+    path.join(basePath, `${slug}/index.md`), // Index file .md
+  ];
+
+  // Check which file exists
+  for (const filePath of possiblePaths) {
+    try {
+      accessSync(filePath);
+      return filePath;
+    } catch (err) {
+      // File doesn't exist, try next
+    }
+  }
+
+  // Default fallback
+  return path.join(basePath, `${slug}/index.mdx`);
 }
 
 function justGetFrontmatterFromMD<Frontmatter>(rawMd: string): Frontmatter {
@@ -120,7 +146,9 @@ export async function getAllChilds(pathString: string) {
 
   let prevHref = "";
   for (let it of items) {
-    const found = page_routes_copy.find((innerIt) => innerIt.href == `/${it}`);
+    const found = page_routes_copy.find(
+      (innerIt) => innerIt.href == `/${it}` || innerIt.href.endsWith(`/${it}`)
+    );
     if (!found) break;
     prevHref += found.href;
     page_routes_copy = found.items ?? [];
@@ -132,7 +160,7 @@ export async function getAllChilds(pathString: string) {
       const totalPath = path.join(
         process.cwd(),
         "/contents/docs/",
-        prevHref,
+        prevHref.replace("/website", "website"), // Convert route path to file path
         it.href,
         "index.mdx"
       );

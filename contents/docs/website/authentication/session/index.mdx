@@ -1,0 +1,768 @@
+# Session Management 💾
+
+## Overview
+
+The **Edukai Session Management** system provides robust client-side session handling with secure token storage, automatic cleanup, and seamless integration with React state management. The system ensures persistent authentication across browser sessions while maintaining security best practices.
+
+## Session Architecture
+
+### 🏗️ **Session Management Structure**
+
+```
+Session Management Architecture
+┌─────────────────────────────────────────────────────────────┐
+│                    Session Layer                            │
+├─────────────────────────────────────────────────────────────┤
+│  Storage Layer  │  Hook Layer     │  Utility Layer         │
+│  ─────────────  │  ─────────────  │  ─────────────────────  │
+│  • SessionStore │  • useSession   │  • Auth Utils          │
+│  • localStorage │  • useAuthGuard │  • Token Validation    │
+│  • Data Cleanup │  • State Mgmt   │  • User Extraction     │
+│  • Validation   │  • Persistence  │  • Session Checks      │
+├─────────────────────────────────────────────────────────────┤
+│                    React Integration                        │
+│  • State synchronization with localStorage                 │
+│  • Automatic session validation on mount                   │
+│  • SSR-safe client-side operations                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 📁 **Session Files Structure**
+
+```
+Session Management (3 files, ~220 lines)
+├── 📁 lib/
+│   ├── session.ts                 # Core session storage (65 lines)
+│   └── auth-utils.ts              # Session utilities (38 lines)
+└── 📁 hooks/
+    └── useSession.ts              # Session React hook (117 lines)
+```
+
+---
+
+## Core Session Storage
+
+### 💾 **SessionStorage Module**
+
+**File**: `lib/session.ts` (65 lines)
+
+The core session storage module that handles all client-side session data persistence.
+
+#### **Storage Constants**
+
+```typescript
+const TOKEN_KEY = "auth_token";
+const USER_KEY = "user_data";
+
+export const sessionStorage = {
+  // Token management methods
+  setToken,
+  getToken,
+
+  // User data management methods
+  setUser,
+  getUser,
+
+  // Session lifecycle methods
+  clearSession,
+  cleanupInvalidData,
+};
+```
+
+#### **Token Management**
+
+```typescript
+/**
+ * Store authentication token in localStorage
+ * @param token - JWT token string
+ */
+setToken: (token: string) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
+},
+
+/**
+ * Retrieve authentication token from localStorage
+ * @returns Token string or null if not found/invalid
+ */
+getToken: () => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token && token !== "undefined" && token !== "null") {
+      return token;
+    }
+  }
+  return null;
+},
+```
+
+**Features**:
+
+- **SSR Safety**: Client-side only operations with `typeof window` checks
+- **Data Validation**: Filters out invalid token values ("undefined", "null")
+- **Null Safety**: Returns null for invalid or missing tokens
+- **Type Safety**: Consistent string return type
+
+#### **User Data Management**
+
+```typescript
+/**
+ * Store user data in localStorage
+ * @param user - User object to store
+ */
+setUser: (user: any) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+},
+
+/**
+ * Retrieve user data from localStorage
+ * @returns User object or null if not found/invalid
+ */
+getUser: () => {
+  if (typeof window !== "undefined") {
+    const user = localStorage.getItem(USER_KEY);
+    if (user && user !== "undefined") {
+      try {
+        return JSON.parse(user);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem(USER_KEY);
+        return null;
+      }
+    }
+  }
+  return null;
+},
+```
+
+**Features**:
+
+- **JSON Serialization**: Automatic JSON stringify/parse for complex objects
+- **Error Recovery**: Removes corrupted data and returns null
+- **Data Validation**: Checks for undefined values before parsing
+- **Error Logging**: Logs parsing errors for debugging
+
+#### **Session Lifecycle**
+
+```typescript
+/**
+ * Clear all session data from localStorage
+ */
+clearSession: () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }
+},
+
+/**
+ * Clean up any invalid session data
+ * Removes corrupted or invalid tokens/user data
+ */
+cleanupInvalidData: () => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const user = localStorage.getItem(USER_KEY);
+
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+
+    if (user === "undefined" || user === "null") {
+      localStorage.removeItem(USER_KEY);
+    }
+  }
+},
+```
+
+**Features**:
+
+- **Complete Cleanup**: Removes both token and user data
+- **Data Sanitization**: Removes invalid string values
+- **Maintenance**: Automatic cleanup of corrupted data
+- **SSR Safety**: Client-side only operations
+
+---
+
+## Session Hook
+
+### 🎣 **useSession Hook**
+
+**File**: `hooks/useSession.ts` (117 lines)
+
+The central React hook that manages authentication state and integrates with the session storage.
+
+#### **Hook Interface**
+
+```typescript
+type User = AuthResponse["user"] | null;
+
+export function useSession() {
+  const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState(true);
+  const authService = useAuthService();
+
+  return {
+    user, // Current authenticated user
+    loading, // Loading state indicator
+    login, // Login function
+    register, // Registration function
+    logout, // Logout function
+  };
+}
+```
+
+#### **Session Initialization**
+
+```typescript
+useEffect(() => {
+  // Clean up any invalid data first
+  sessionStorage.cleanupInvalidData();
+
+  // Initialize user state from localStorage after hydration
+  const storedUser = sessionStorage.getUser();
+  setUser(storedUser);
+
+  const token = sessionStorage.getToken();
+  if (token && !storedUser) {
+    // Validate token and get user data
+    validateSession();
+  } else if (!token && storedUser) {
+    // Clear invalid user data if no token
+    sessionStorage.clearSession();
+    setUser(null);
+    setLoading(false);
+  } else {
+    setLoading(false);
+  }
+}, []);
+```
+
+**Initialization Logic**:
+
+1. **Data Cleanup**: Remove any corrupted session data
+2. **State Hydration**: Load user from localStorage into React state
+3. **Token Validation**: Validate existing tokens with backend
+4. **Consistency Check**: Ensure token and user data are synchronized
+5. **Loading Management**: Set loading state appropriately
+
+#### **Session Validation**
+
+```typescript
+const validateSession = async () => {
+  try {
+    const response = await authService.refreshToken();
+    sessionStorage.setToken(response.token);
+    // Get user data and update state
+    setLoading(false);
+  } catch (error: any) {
+    // If refresh fails, clear session and continue
+    console.warn(
+      "Validation du token échouée, nettoyage de la session:",
+      error.message
+    );
+    sessionStorage.clearSession();
+    setUser(null);
+    setLoading(false);
+  }
+};
+```
+
+**Validation Features**:
+
+- **Token Refresh**: Automatically refresh expired tokens
+- **Error Recovery**: Clear invalid sessions gracefully
+- **State Synchronization**: Update React state with validated data
+- **Graceful Degradation**: Continue without authentication if validation fails
+
+#### **Login Integration**
+
+```typescript
+const login = async (credentials: LoginCredentials) => {
+  try {
+    const response = await authService.login(credentials);
+    sessionStorage.setToken(response.token);
+    sessionStorage.setUser(response.user);
+    setUser(response.user);
+    authToast.loginSuccess();
+    return { success: true, data: response };
+  } catch (error: any) {
+    const errorMessage = translateApiError(
+      error.response?.data?.message || error.message
+    );
+    authToast.loginError(errorMessage);
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+};
+```
+
+**Login Features**:
+
+- **Dual Storage**: Store in both localStorage and React state
+- **Success Feedback**: Show success toast notification
+- **Error Handling**: Translate and display error messages
+- **Return Values**: Consistent success/error response format
+
+#### **Logout Integration**
+
+```typescript
+const logout = async () => {
+  try {
+    await authService.logout();
+    sessionStorage.clearSession();
+    setUser(null);
+    authToast.logoutSuccess();
+  } catch (error) {
+    // Even if logout fails on server, clear local session
+    console.error("Erreur lors de la déconnexion:", error);
+    authToast.logoutError();
+    sessionStorage.clearSession();
+    setUser(null);
+  }
+};
+```
+
+**Logout Features**:
+
+- **Server Logout**: Attempt to logout on server
+- **Local Cleanup**: Always clear local session data
+- **Error Recovery**: Clear local data even if server logout fails
+- **User Feedback**: Show appropriate toast notifications
+
+---
+
+## Session Utilities
+
+### 🛠️ **Auth Utilities**
+
+**File**: `lib/auth-utils.ts` (38 lines)
+
+Utility functions for session management and authentication state checking.
+
+#### **Token Utilities**
+
+```typescript
+export function getAuthToken() {
+  return sessionStorage.getToken();
+}
+
+/**
+ * Get authorization headers for API calls
+ * @returns Headers object with authorization token
+ */
+export function getAuthHeaders() {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+```
+
+#### **User Utilities**
+
+```typescript
+/**
+ * Get the current authenticated user from session storage
+ * @returns User object or null if not authenticated
+ */
+export function getCurrentUser() {
+  return sessionStorage.getUser();
+}
+
+/**
+ * Get the current user's ID from session storage
+ * @returns User ID string or null if not authenticated
+ */
+export function getCurrentUserId(): string | null {
+  const user = getCurrentUser();
+  console.log("🔍 [Auth Utils] Debug - Full user object:", user);
+
+  if (!user) {
+    return null;
+  }
+
+  // Handle different user ID field names
+  const userId = user.id || user._id || user.userId;
+  console.log("🔍 [Auth Utils] Debug - Extracted userId:", userId);
+
+  return userId || null;
+}
+```
+
+**Features**:
+
+- **Flexible ID Extraction**: Handles different user ID field names
+- **Debug Logging**: Comprehensive logging for troubleshooting
+- **Null Safety**: Returns null for missing or invalid users
+- **Type Safety**: Consistent return types
+
+#### **Authentication State**
+
+```typescript
+/**
+ * Check if user is authenticated
+ * @returns boolean indicating if user is logged in
+ */
+export function isAuthenticated(): boolean {
+  const token = sessionStorage.getToken();
+  const user = sessionStorage.getUser();
+  return !!(token && user);
+}
+```
+
+**Features**:
+
+- **Dual Validation**: Checks both token and user presence
+- **Boolean Coercion**: Consistent boolean return value
+- **Session Integrity**: Ensures complete authentication state
+
+---
+
+## Route Protection
+
+### 🛡️ **useAuthGuard Hook**
+
+**File**: `hooks/useAuthGuard.ts` (32 lines)
+
+Specialized hook for route protection with automatic redirects.
+
+#### **Guard Interface**
+
+```typescript
+interface UseAuthGuardOptions {
+  redirectTo?: string; // Default: "/auth"
+  enabled?: boolean; // Default: true
+}
+
+export function useAuthGuard(options: UseAuthGuardOptions = {}) {
+  const { redirectTo = "/auth", enabled = true } = options;
+  const { user, loading } = useSession();
+  const router = useRouter();
+
+  return {
+    user,
+    loading,
+    isAuthenticated: !!user,
+    isLoading: loading,
+  };
+}
+```
+
+#### **Redirect Logic**
+
+```typescript
+useEffect(() => {
+  if (enabled && !loading && !user) {
+    // Get current path to redirect back after login
+    const currentPath = window.location.pathname + window.location.search;
+    const redirectUrl = `${redirectTo}?redirect=${encodeURIComponent(
+      currentPath
+    )}`;
+    router.push(redirectUrl);
+  }
+}, [user, loading, router, enabled, redirectTo]);
+```
+
+**Protection Features**:
+
+- **Conditional Protection**: Can be enabled/disabled
+- **Return URL**: Preserves intended destination
+- **Loading Awareness**: Waits for session validation
+- **URL Encoding**: Safe handling of redirect URLs
+
+---
+
+## Session Persistence
+
+### 💾 **Storage Strategy**
+
+#### **localStorage vs sessionStorage**
+
+The system uses `localStorage` for session persistence:
+
+**Advantages of localStorage**:
+
+- **Persistence**: Survives browser restarts
+- **Cross-tab**: Shared across browser tabs
+- **User Experience**: Maintains login state
+- **Performance**: Reduces authentication requests
+
+**Security Considerations**:
+
+- **XSS Protection**: Proper data sanitization
+- **Data Validation**: Validates stored data integrity
+- **Automatic Cleanup**: Removes invalid data
+- **Token Expiration**: Handles expired tokens gracefully
+
+#### **Data Structure**
+
+```typescript
+// Token storage
+localStorage.setItem("auth_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...");
+
+// User data storage
+localStorage.setItem(
+  "user_data",
+  JSON.stringify({
+    id: "user123",
+    username: "user@example.com",
+    email: "user@example.com",
+    firstName: "John",
+    lastName: "Doe",
+  })
+);
+```
+
+#### **Data Validation**
+
+```typescript
+// Token validation
+const token = localStorage.getItem("auth_token");
+if (token && token !== "undefined" && token !== "null") {
+  // Valid token
+}
+
+// User data validation
+const userData = localStorage.getItem("user_data");
+if (userData && userData !== "undefined") {
+  try {
+    const user = JSON.parse(userData);
+    // Valid user data
+  } catch (error) {
+    // Invalid JSON, remove corrupted data
+    localStorage.removeItem("user_data");
+  }
+}
+```
+
+---
+
+## Session Security
+
+### 🔐 **Security Measures**
+
+#### **Data Sanitization**
+
+```typescript
+// Clean up invalid data on initialization
+cleanupInvalidData: () => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const user = localStorage.getItem(USER_KEY);
+
+    // Remove invalid string values
+    if (token === "undefined" || token === "null") {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+
+    if (user === "undefined" || user === "null") {
+      localStorage.removeItem(USER_KEY);
+    }
+  }
+},
+```
+
+#### **Error Recovery**
+
+```typescript
+// Graceful error handling for corrupted data
+getUser: () => {
+  if (typeof window !== "undefined") {
+    const user = localStorage.getItem(USER_KEY);
+    if (user && user !== "undefined") {
+      try {
+        return JSON.parse(user);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem(USER_KEY);
+        return null;
+      }
+    }
+  }
+  return null;
+},
+```
+
+#### **Session Validation**
+
+```typescript
+// Validate session integrity
+const validateSession = async () => {
+  try {
+    const response = await authService.refreshToken();
+    sessionStorage.setToken(response.token);
+    setLoading(false);
+  } catch (error: any) {
+    console.warn("Token validation failed, clearing session:", error.message);
+    sessionStorage.clearSession();
+    setUser(null);
+    setLoading(false);
+  }
+};
+```
+
+---
+
+## Performance Optimizations
+
+### ⚡ **Session Optimizations**
+
+#### **1. Lazy Initialization**
+
+```typescript
+// Initialize session state only when needed
+const [user, setUser] = useState<User>(() => {
+  // Don't access localStorage during SSR
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getUser();
+});
+```
+
+#### **2. Memoized Utilities**
+
+```typescript
+// Memoize expensive session checks
+const isAuthenticated = useMemo(() => {
+  return !!(user && sessionStorage.getToken());
+}, [user]);
+
+// Memoize auth headers
+const authHeaders = useMemo(() => {
+  const token = sessionStorage.getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}, [sessionStorage.getToken()]);
+```
+
+#### **3. Debounced Updates**
+
+```typescript
+// Debounce session storage updates
+const debouncedSetUser = useMemo(
+  () =>
+    debounce((user: User) => {
+      sessionStorage.setUser(user);
+    }, 100),
+  []
+);
+```
+
+#### **4. Storage Event Handling**
+
+```typescript
+// Listen for storage changes across tabs
+useEffect(() => {
+  const handleStorageChange = (e: StorageEvent) => {
+    if (e.key === USER_KEY) {
+      const newUser = e.newValue ? JSON.parse(e.newValue) : null;
+      setUser(newUser);
+    }
+  };
+
+  window.addEventListener("storage", handleStorageChange);
+  return () => window.removeEventListener("storage", handleStorageChange);
+}, []);
+```
+
+---
+
+## Testing Strategies
+
+### 🧪 **Session Testing**
+
+#### **Unit Tests**
+
+```typescript
+// Session storage tests
+describe("sessionStorage", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("should store and retrieve token", () => {
+    const token = "test-token";
+    sessionStorage.setToken(token);
+    expect(sessionStorage.getToken()).toBe(token);
+  });
+
+  it("should handle invalid token values", () => {
+    localStorage.setItem("auth_token", "undefined");
+    expect(sessionStorage.getToken()).toBeNull();
+  });
+
+  it("should store and retrieve user data", () => {
+    const user = { id: "1", username: "test" };
+    sessionStorage.setUser(user);
+    expect(sessionStorage.getUser()).toEqual(user);
+  });
+
+  it("should handle corrupted user data", () => {
+    localStorage.setItem("user_data", "invalid-json");
+    expect(sessionStorage.getUser()).toBeNull();
+    expect(localStorage.getItem("user_data")).toBeNull();
+  });
+});
+```
+
+#### **Hook Tests**
+
+```typescript
+// useSession hook tests
+describe("useSession", () => {
+  it("should initialize with stored user", () => {
+    const mockUser = { id: "1", username: "test" };
+    sessionStorage.setUser(mockUser);
+
+    const { result } = renderHook(() => useSession());
+
+    expect(result.current.user).toEqual(mockUser);
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("should clear session on logout", async () => {
+    const { result } = renderHook(() => useSession());
+
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(result.current.user).toBeNull();
+    expect(sessionStorage.getUser()).toBeNull();
+    expect(sessionStorage.getToken()).toBeNull();
+  });
+});
+```
+
+#### **Integration Tests**
+
+```typescript
+// Session integration tests
+describe("Session Integration", () => {
+  it("should maintain session across page reloads", () => {
+    const user = { id: "1", username: "test" };
+    const token = "test-token";
+
+    sessionStorage.setUser(user);
+    sessionStorage.setToken(token);
+
+    // Simulate page reload
+    const { result } = renderHook(() => useSession());
+
+    expect(result.current.user).toEqual(user);
+    expect(isAuthenticated()).toBe(true);
+  });
+});
+```
+
+---
+
+**Navigation**:
+
+- 🏠 **[Authentication Overview](./overview.md)** - Complete authentication documentation
+- 🏗️ **[Architecture](./architecture.md)** - System architecture and design patterns
+- 🎨 **[Components](./components.md)** - Authentication UI components
+- 🔗 **[Services](./services.md)** - API service layer
+- 🛡️ **[Security](./security.md)** - Security features and best practices

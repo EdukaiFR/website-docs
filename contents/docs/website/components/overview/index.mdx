@@ -1,0 +1,526 @@
+# Components Structure - Edukai Frontend 📦
+
+## Overview
+
+The components directory is organized by feature and purpose, following a hierarchical structure that promotes reusability and maintainability. Components are built using TypeScript, Tailwind CSS, and ShadCN UI primitives.
+
+## Component Directory Structure
+
+```
+📁 components/
+├── 📁 auth/                      # Authentication components
+├── 📁 badge/                     # Badge/status indicator components
+├── 📁 card/                      # Card components
+├── 📁 data-table/               # Data table components
+├── 📁 generator/                # Content generation UI
+├── 📁 input/                    # Input components
+├── 📁 recognition/              # OCR/text recognition components
+├── 📁 settings/                 # Settings-related components
+├── 📁 sidebar/                  # Sidebar navigation components
+├── 📁 ui/                       # ShadCN UI base components (30+ components)
+├── 📄 mode-toggle.tsx           # Dark/light mode toggle
+├── 📄 navigation-location.tsx   # Navigation breadcrumb (284 lines)
+└── 📄 theme-provider.tsx        # Theme context provider
+```
+
+## Component Categories
+
+### 1. **Base UI Components** (`components/ui/`)
+
+These are the foundational ShadCN UI components that provide the basic building blocks:
+
+#### Core Components
+
+```typescript
+// Button component with variants
+import { Button } from "@/components/ui/button";
+
+<Button variant="default" size="lg">
+  Click me
+</Button>;
+```
+
+#### Form Components
+
+```typescript
+// Form components with validation
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+<Form {...form}>
+  <FormField
+    control={form.control}
+    name="username"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Username</FormLabel>
+        <FormControl>
+          <Input placeholder="Enter username" {...field} />
+        </FormControl>
+      </FormItem>
+    )}
+  />
+</Form>;
+```
+
+#### Navigation Components
+
+```typescript
+// Sidebar component (774 lines - complex navigation)
+import { Sidebar, SidebarContent, SidebarGroup } from "@/components/ui/sidebar";
+
+<Sidebar>
+  <SidebarContent>
+    <SidebarGroup>{/* Navigation items */}</SidebarGroup>
+  </SidebarContent>
+</Sidebar>;
+```
+
+### 2. **Feature Components**
+
+#### Authentication Components (`components/auth/`)
+
+```typescript
+// Authentication form components
+interface LoginFormProps {
+  onSubmit: (data: LoginCredentials) => void;
+  loading?: boolean;
+}
+
+export const LoginForm = ({ onSubmit, loading }: LoginFormProps) => {
+  // Form logic and validation
+  return <form onSubmit={handleSubmit(onSubmit)}>{/* Form fields */}</form>;
+};
+```
+
+#### Generator Components (`components/generator/`)
+
+Key components for content generation:
+
+##### File Upload Component (250 lines)
+
+```typescript
+// File upload with OCR processing
+interface FileUploadProps {
+  onFileProcessed: (text: string[]) => void;
+  acceptedFormats: string[];
+  maxFileSize: number;
+}
+
+export const FileUpload = ({
+  onFileProcessed,
+  acceptedFormats,
+  maxFileSize,
+}: FileUploadProps) => {
+  const [files, setFiles] = useState<File[]>([]);
+  const [processing, setProcessing] = useState(false);
+
+  // OCR processing with Tesseract.js
+  const processFiles = async () => {
+    setProcessing(true);
+    try {
+      const texts = await Promise.all(
+        files.map((file) => processFileWithOCR(file))
+      );
+      onFileProcessed(texts);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div className="file-upload-container">
+      {/* Drag & drop area */}
+      {/* File list */}
+      {/* Processing indicator */}
+    </div>
+  );
+};
+```
+
+##### Loading UI Component
+
+```typescript
+// Sophisticated loading states for generation
+export const LoadingUI = () => (
+  <div className="loading-container">
+    <div className="loading-animation">{/* Complex loading animation */}</div>
+    <div className="loading-steps">{/* Step-by-step progress */}</div>
+  </div>
+);
+```
+
+#### Data Table Components (`components/data-table/`)
+
+```typescript
+// Reusable data table with sorting, filtering, pagination
+interface DataTableProps<T> {
+  data: T[];
+  columns: ColumnDef<T>[];
+  onRowClick?: (row: T) => void;
+  loading?: boolean;
+}
+
+export function DataTable<T>({
+  data,
+  columns,
+  onRowClick,
+  loading,
+}: DataTableProps<T>) {
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  return <div className="data-table">{/* Table implementation */}</div>;
+}
+```
+
+### 3. **Layout Components**
+
+#### Navigation Location (284 lines)
+
+```typescript
+// Sophisticated breadcrumb navigation
+export function HeaderBreadcrumb() {
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+  const { upLinks, downLinks } = useLinks();
+  const [courseTitle, setCourseTitle] = useState<string>("");
+
+  // Complex logic for dynamic breadcrumbs
+  const isCourseId = (segment: string): boolean => {
+    const mongoIdPattern = /^[a-f\d]{24}$/i;
+    return mongoIdPattern.test(segment);
+  };
+
+  return (
+    <header className="flex h-14 shrink-0 items-center gap-0 lg:gap-2">
+      <div className="flex items-center gap-3 px-4 w-full min-w-0">
+        <SidebarTrigger />
+        <Separator orientation="vertical" />
+        <Breadcrumb>{/* Dynamic breadcrumb generation */}</Breadcrumb>
+      </div>
+    </header>
+  );
+}
+```
+
+#### Theme Provider
+
+```typescript
+// Theme context for dark/light mode
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  defaultTheme?: "dark" | "light" | "system";
+  storageKey?: string;
+}
+
+export function ThemeProvider({
+  children,
+  defaultTheme = "system",
+  storageKey = "theme",
+}: ThemeProviderProps) {
+  const [theme, setTheme] = useState<"dark" | "light" | "system">(defaultTheme);
+
+  return (
+    <ThemeProviderContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeProviderContext.Provider>
+  );
+}
+```
+
+## Component Patterns
+
+### 1. **Compound Components**
+
+```typescript
+// Card compound component
+export const Card = ({ children, className }: CardProps) => (
+  <div className={cn("card-base", className)}>{children}</div>
+);
+
+Card.Header = ({ children }: { children: React.ReactNode }) => (
+  <div className="card-header">{children}</div>
+);
+
+Card.Content = ({ children }: { children: React.ReactNode }) => (
+  <div className="card-content">{children}</div>
+);
+
+Card.Footer = ({ children }: { children: React.ReactNode }) => (
+  <div className="card-footer">{children}</div>
+);
+
+// Usage
+<Card>
+  <Card.Header>
+    <h2>Title</h2>
+  </Card.Header>
+  <Card.Content>
+    <p>Content</p>
+  </Card.Content>
+</Card>;
+```
+
+### 2. **Render Props Pattern**
+
+```typescript
+// Data fetcher with render props
+interface DataFetcherProps<T> {
+  url: string;
+  children: (
+    data: T | null,
+    loading: boolean,
+    error: string | null
+  ) => React.ReactNode;
+}
+
+export function DataFetcher<T>({ url, children }: DataFetcherProps<T>) {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch logic
+
+  return <>{children(data, loading, error)}</>;
+}
+
+// Usage
+<DataFetcher<Course[]> url="/api/courses">
+  {(courses, loading, error) => {
+    if (loading) return <LoadingSkeleton />;
+    if (error) return <ErrorMessage error={error} />;
+    return <CourseList courses={courses} />;
+  }}
+</DataFetcher>;
+```
+
+### 3. **Higher-Order Components**
+
+```typescript
+// Authentication HOC
+export function withAuth<P extends object>(Component: React.ComponentType<P>) {
+  return function AuthenticatedComponent(props: P) {
+    const { user, loading } = useSession();
+
+    if (loading) return <LoadingSkeleton />;
+    if (!user) return <Navigate to="/auth/login" />;
+
+    return <Component {...props} />;
+  };
+}
+
+// Usage
+const ProtectedDashboard = withAuth(Dashboard);
+```
+
+## Component Styling
+
+### 1. **Tailwind CSS Classes**
+
+```typescript
+// Consistent styling patterns
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border border-input hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "underline-offset-4 hover:underline text-primary",
+      },
+      size: {
+        default: "h-10 py-2 px-4",
+        sm: "h-9 px-3 rounded-md",
+        lg: "h-11 px-8 rounded-md",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
+```
+
+### 2. **Component Variants**
+
+```typescript
+// Card component with variants
+const cardVariants = cva(
+  "rounded-lg border bg-card text-card-foreground shadow-sm",
+  {
+    variants: {
+      variant: {
+        default: "border-border",
+        destructive: "border-destructive",
+        success: "border-green-500",
+      },
+      size: {
+        default: "p-6",
+        sm: "p-4",
+        lg: "p-8",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
+```
+
+## Component Organization Best Practices
+
+### 1. **File Structure**
+
+```
+📁 components/feature/
+├── 📄 index.ts              # Barrel exports
+├── 📄 FeatureComponent.tsx  # Main component
+├── 📄 FeatureForm.tsx       # Form component
+├── 📄 FeatureList.tsx       # List component
+├── 📄 types.ts              # Component types
+└── 📄 utils.ts              # Component utilities
+```
+
+### 2. **Barrel Exports**
+
+```typescript
+// components/generator/index.ts
+export { FileUpload } from "./file-upload";
+export { GeneratorForm } from "./generator-form";
+export { GeneratorHeader } from "./generator-header";
+export { LoadingUI } from "./loading-ui";
+```
+
+### 3. **Component Documentation**
+
+```typescript
+/**
+ * FileUpload Component
+ *
+ * Handles file upload with OCR processing using Tesseract.js
+ * Supports multiple file formats: PDF, images, Word documents
+ *
+ * @param onFileProcessed - Callback when files are processed
+ * @param acceptedFormats - Array of accepted file formats
+ * @param maxFileSize - Maximum file size in bytes
+ *
+ * @example
+ * <FileUpload
+ *   onFileProcessed={(texts) => console.log(texts)}
+ *   acceptedFormats={['pdf', 'jpg', 'png']}
+ *   maxFileSize={10 * 1024 * 1024} // 10MB
+ * />
+ */
+```
+
+## Performance Considerations
+
+### 1. **Lazy Loading**
+
+```typescript
+// Lazy load heavy components
+const FileUpload = lazy(() => import("./FileUpload"));
+const DataTable = lazy(() => import("./DataTable"));
+
+// Usage with Suspense
+<Suspense fallback={<LoadingSkeleton />}>
+  <FileUpload onFileProcessed={handleFileProcessed} />
+</Suspense>;
+```
+
+### 2. **Memoization**
+
+```typescript
+// Memoize expensive components
+export const ExpensiveComponent = memo(({ data, onAction }) => {
+  const processedData = useMemo(
+    () => data.map((item) => ({ ...item, processed: true })),
+    [data]
+  );
+
+  const handleAction = useCallback(
+    (id: string) => {
+      onAction(id);
+    },
+    [onAction]
+  );
+
+  return (
+    <div>
+      {processedData.map((item) => (
+        <Item key={item.id} data={item} onAction={handleAction} />
+      ))}
+    </div>
+  );
+});
+```
+
+### 3. **Code Splitting**
+
+```typescript
+// Dynamic imports for large components
+const DynamicChart = dynamic(() => import("./Chart"), {
+  loading: () => <ChartSkeleton />,
+  ssr: false, // Disable SSR for client-only components
+});
+```
+
+## Testing Patterns
+
+### 1. **Component Testing**
+
+```typescript
+// Example test structure
+describe("FileUpload Component", () => {
+  it("should handle file upload", async () => {
+    const mockOnFileProcessed = jest.fn();
+
+    render(
+      <FileUpload
+        onFileProcessed={mockOnFileProcessed}
+        acceptedFormats={["pdf", "jpg"]}
+        maxFileSize={5 * 1024 * 1024}
+      />
+    );
+
+    // Test file upload functionality
+    const fileInput = screen.getByRole("button", { name: /upload/i });
+    fireEvent.click(fileInput);
+
+    expect(mockOnFileProcessed).toHaveBeenCalled();
+  });
+});
+```
+
+## Key Component Metrics
+
+| Component                   | Lines | Complexity | Purpose                       |
+| --------------------------- | ----- | ---------- | ----------------------------- |
+| `navigation-location.tsx`   | 284   | High       | Dynamic breadcrumb navigation |
+| `ui/sidebar.tsx`            | 774   | Very High  | Main application sidebar      |
+| `generator/file-upload.tsx` | 250   | High       | File processing with OCR      |
+| `generator/loading-ui.tsx`  | 200+  | Medium     | Loading states and animations |
+| `data-table/*`              | 150+  | Medium     | Reusable data tables          |
+
+This component structure provides a solid foundation for building consistent, reusable, and maintainable UI components across the Edukai frontend application.
