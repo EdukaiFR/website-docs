@@ -5,11 +5,567 @@ description: "TODO: Complete state management documentation"
 
 # State Management
 
-// TODO: Complete documentation for state management section
+Edukai implements state management using React's built-in state primitives, custom hooks, and context providers for predictable data flow and optimal performance.
 
-This section will cover:
+## 🎯 Overview
 
-- Global state management patterns
-- Local state management strategies
-- State synchronization techniques
-- Performance considerations for state
+State management strategies include:
+- React state with useState and useReducer
+- Context API for global state
+- Custom hooks for business logic
+- Local storage persistence
+- Optimistic updates
+
+## 🏗️ Architecture
+
+### State Layers
+
+```
+Application State Architecture:
+├── Global State (Context)
+│   ├── Authentication State
+│   ├── Theme State
+│   └── Navigation State
+├── Feature State (Custom Hooks)
+│   ├── Course Management
+│   ├── Quiz System
+│   └── File Processing
+└── Component State (useState)
+    ├── Form State
+    ├── UI State
+    └── Local Interactions
+```
+
+## 🌐 Global State with Context
+
+### Theme Provider
+
+```typescript
+// components/theme-provider.tsx
+interface ThemeProviderProps {
+  children: React.ReactNode
+  defaultTheme?: Theme
+  storageKey?: string
+}
+
+type Theme = "dark" | "light" | "system"
+
+interface ThemeProviderState {
+  theme: Theme
+  setTheme: (theme: Theme) => void
+}
+
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined)
+
+export function ThemeProvider({
+  children,
+  defaultTheme = "system",
+  storageKey = "ui-theme",
+  ...props
+}: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(() => {
+    return (localStorage.getItem(storageKey) as Theme) || defaultTheme
+  })
+
+  useEffect(() => {
+    const root = window.document.documentElement
+    root.classList.remove("light", "dark")
+
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      root.classList.add(systemTheme)
+      return
+    }
+
+    root.classList.add(theme)
+  }, [theme])
+
+  const value = {
+    theme,
+    setTheme: (theme: Theme) => {
+      localStorage.setItem(storageKey, theme)
+      setTheme(theme)
+    },
+  }
+
+  return (
+    <ThemeProviderContext.Provider {...props} value={value}>
+      {children}
+    </ThemeProviderContext.Provider>
+  )
+}
+
+export const useTheme = () => {
+  const context = useContext(ThemeProviderContext)
+  if (context === undefined)
+    throw new Error("useTheme must be used within a ThemeProvider")
+  return context
+}
+```
+
+### Authentication Context
+
+```typescript
+// contexts/AuthContext.tsx
+interface AuthContextType {
+  user: User | null
+  login: (credentials: LoginCredentials) => Promise<void>
+  logout: () => Promise<void>
+  isLoading: boolean
+  error: string | null
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Check for existing session on mount
+    checkAuthStatus()
+  }, [])
+
+  const checkAuthStatus = async () => {
+    try {
+      const session = await authService.getSession()
+      setUser(session?.user || null)
+    } catch (error) {
+      console.error('Auth check failed:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const login = async (credentials: LoginCredentials) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await authService.login(credentials)
+      setUser(response.user)
+      toast.success('Welcome back!')
+    } catch (error) {
+      setError(error.message)
+      toast.error('Login failed')
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await authService.logout()
+      setUser(null)
+      toast.success('Logged out successfully')
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, isLoading, error }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
+```
+
+## 🔧 Feature State Management
+
+### Course State Hook
+
+```typescript
+// State pattern for course management
+export function useCourseState() {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+  const [filters, setFilters] = useState({
+    subject: '',
+    level: '',
+    search: ''
+  })
+
+  const filteredCourses = useMemo(() => {
+    return courses.filter(course => {
+      if (filters.subject && course.subject !== filters.subject) return false
+      if (filters.level && course.level !== filters.level) return false
+      if (filters.search && !course.title.toLowerCase().includes(filters.search.toLowerCase())) return false
+      return true
+    })
+  }, [courses, filters])
+
+  const updateCourse = (courseId: string, updates: Partial<Course>) => {
+    setCourses(prev => prev.map(course => 
+      course.id === courseId ? { ...course, ...updates } : course
+    ))
+    
+    if (selectedCourse?.id === courseId) {
+      setSelectedCourse(prev => prev ? { ...prev, ...updates } : null)
+    }
+  }
+
+  const addCourse = (course: Course) => {
+    setCourses(prev => [...prev, course])
+  }
+
+  const removeCourse = (courseId: string) => {
+    setCourses(prev => prev.filter(course => course.id !== courseId))
+    if (selectedCourse?.id === courseId) {
+      setSelectedCourse(null)
+    }
+  }
+
+  return {
+    courses: filteredCourses,
+    allCourses: courses,
+    selectedCourse,
+    filters,
+    setSelectedCourse,
+    setFilters,
+    updateCourse,
+    addCourse,
+    removeCourse
+  }
+}
+```
+
+### Quiz State Reducer
+
+```typescript
+// Complex state with useReducer
+interface QuizState {
+  currentQuestion: number
+  answers: Record<number, string>
+  timeRemaining: number
+  status: 'idle' | 'active' | 'paused' | 'completed'
+  score: number | null
+}
+
+type QuizAction =
+  | { type: 'START_QUIZ'; payload: { timeLimit: number } }
+  | { type: 'ANSWER_QUESTION'; payload: { questionIndex: number; answer: string } }
+  | { type: 'NEXT_QUESTION' }
+  | { type: 'PREVIOUS_QUESTION' }
+  | { type: 'PAUSE_QUIZ' }
+  | { type: 'RESUME_QUIZ' }
+  | { type: 'COMPLETE_QUIZ'; payload: { score: number } }
+  | { type: 'TICK_TIMER' }
+
+function quizReducer(state: QuizState, action: QuizAction): QuizState {
+  switch (action.type) {
+    case 'START_QUIZ':
+      return {
+        ...state,
+        status: 'active',
+        timeRemaining: action.payload.timeLimit,
+        currentQuestion: 0,
+        answers: {},
+        score: null
+      }
+
+    case 'ANSWER_QUESTION':
+      return {
+        ...state,
+        answers: {
+          ...state.answers,
+          [action.payload.questionIndex]: action.payload.answer
+        }
+      }
+
+    case 'NEXT_QUESTION':
+      return {
+        ...state,
+        currentQuestion: Math.min(state.currentQuestion + 1, /* totalQuestions */ 10)
+      }
+
+    case 'PREVIOUS_QUESTION':
+      return {
+        ...state,
+        currentQuestion: Math.max(state.currentQuestion - 1, 0)
+      }
+
+    case 'PAUSE_QUIZ':
+      return { ...state, status: 'paused' }
+
+    case 'RESUME_QUIZ':
+      return { ...state, status: 'active' }
+
+    case 'COMPLETE_QUIZ':
+      return {
+        ...state,
+        status: 'completed',
+        score: action.payload.score
+      }
+
+    case 'TICK_TIMER':
+      const newTime = state.timeRemaining - 1
+      return {
+        ...state,
+        timeRemaining: newTime,
+        ...(newTime <= 0 && { status: 'completed' })
+      }
+
+    default:
+      return state
+  }
+}
+
+export function useQuizState() {
+  const [state, dispatch] = useReducer(quizReducer, {
+    currentQuestion: 0,
+    answers: {},
+    timeRemaining: 0,
+    status: 'idle',
+    score: null
+  })
+
+  return { state, dispatch }
+}
+```
+
+## 💾 Persistence Patterns
+
+### Local Storage State
+
+```typescript
+// Persistent state hook
+function usePersistentState<T>(key: string, defaultValue: T) {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const saved = localStorage.getItem(key)
+      return saved ? JSON.parse(saved) : defaultValue
+    } catch {
+      return defaultValue
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(state))
+    } catch (error) {
+      console.error('Failed to save to localStorage:', error)
+    }
+  }, [key, state])
+
+  return [state, setState] as const
+}
+
+// Usage example
+function useUserPreferences() {
+  const [preferences, setPreferences] = usePersistentState('userPreferences', {
+    theme: 'system' as Theme,
+    language: 'en',
+    notifications: true,
+    autoSave: true
+  })
+
+  const updatePreference = <K extends keyof typeof preferences>(
+    key: K,
+    value: typeof preferences[K]
+  ) => {
+    setPreferences(prev => ({ ...prev, [key]: value }))
+  }
+
+  return { preferences, updatePreference }
+}
+```
+
+### Session Storage
+
+```typescript
+// Session-based state for temporary data
+function useSessionState<T>(key: string, defaultValue: T) {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const saved = sessionStorage.getItem(key)
+      return saved ? JSON.parse(saved) : defaultValue
+    } catch {
+      return defaultValue
+    }
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem(key, JSON.stringify(state))
+  }, [key, state])
+
+  return [state, setState] as const
+}
+```
+
+## 🔄 Optimistic Updates
+
+### Optimistic Course Updates
+
+```typescript
+function useOptimisticCourses() {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [optimisticUpdates, setOptimisticUpdates] = useState<Map<string, Partial<Course>>>(new Map())
+
+  const displayedCourses = useMemo(() => {
+    return courses.map(course => {
+      const optimisticUpdate = optimisticUpdates.get(course.id)
+      return optimisticUpdate ? { ...course, ...optimisticUpdate } : course
+    })
+  }, [courses, optimisticUpdates])
+
+  const updateCourseOptimistically = async (courseId: string, updates: Partial<Course>) => {
+    // Apply optimistic update immediately
+    setOptimisticUpdates(prev => new Map(prev).set(courseId, updates))
+
+    try {
+      // Make API call
+      const updatedCourse = await courseService.updateCourse(courseId, updates)
+      
+      // Update actual state
+      setCourses(prev => prev.map(course => 
+        course.id === courseId ? updatedCourse : course
+      ))
+      
+      // Remove optimistic update
+      setOptimisticUpdates(prev => {
+        const next = new Map(prev)
+        next.delete(courseId)
+        return next
+      })
+    } catch (error) {
+      // Revert optimistic update on error
+      setOptimisticUpdates(prev => {
+        const next = new Map(prev)
+        next.delete(courseId)
+        return next
+      })
+      throw error
+    }
+  }
+
+  return {
+    courses: displayedCourses,
+    updateCourseOptimistically
+  }
+}
+```
+
+## 📊 State Performance Optimization
+
+### Memoized Selectors
+
+```typescript
+// Optimize state selection with useMemo
+function useCourseSelectors(courses: Course[]) {
+  const coursesBySubject = useMemo(() => {
+    return courses.reduce((acc, course) => {
+      if (!acc[course.subject]) {
+        acc[course.subject] = []
+      }
+      acc[course.subject].push(course)
+      return acc
+    }, {} as Record<string, Course[]>)
+  }, [courses])
+
+  const completedCourses = useMemo(() => {
+    return courses.filter(course => course.status === 'completed')
+  }, [courses])
+
+  const activeCourses = useMemo(() => {
+    return courses.filter(course => course.status === 'active')
+  }, [courses])
+
+  return {
+    coursesBySubject,
+    completedCourses,
+    activeCourses
+  }
+}
+```
+
+### Component State Isolation
+
+```typescript
+// Isolate component state to prevent unnecessary re-renders
+function CourseCard({ course }: { course: Course }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+
+  // Local state doesn't affect parent re-renders
+  return (
+    <Card 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={cn(isHovered && "shadow-lg")}
+    >
+      <CardContent>
+        <h3>{course.title}</h3>
+        <Button onClick={() => setIsExpanded(!isExpanded)}>
+          {isExpanded ? 'Less' : 'More'}
+        </Button>
+        {isExpanded && <CourseDetails course={course} />}
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+## 🧪 State Testing
+
+### Testing Custom Hooks
+
+```typescript
+// Test custom hooks with @testing-library/react-hooks
+import { renderHook, act } from '@testing-library/react'
+import { useCourseState } from './useCourseState'
+
+describe('useCourseState', () => {
+  it('should add a course', () => {
+    const { result } = renderHook(() => useCourseState())
+    
+    const newCourse = { id: '1', title: 'Test Course', subject: 'Math', level: 'beginner' }
+    
+    act(() => {
+      result.current.addCourse(newCourse)
+    })
+    
+    expect(result.current.courses).toContain(newCourse)
+  })
+
+  it('should filter courses by subject', () => {
+    const { result } = renderHook(() => useCourseState())
+    
+    const courses = [
+      { id: '1', title: 'Math Course', subject: 'Math', level: 'beginner' },
+      { id: '2', title: 'Science Course', subject: 'Science', level: 'beginner' }
+    ]
+    
+    act(() => {
+      courses.forEach(course => result.current.addCourse(course))
+      result.current.setFilters({ subject: 'Math', level: '', search: '' })
+    })
+    
+    expect(result.current.courses).toHaveLength(1)
+    expect(result.current.courses[0].subject).toBe('Math')
+  })
+})
+```
+
+## 🎯 Best Practices
+
+1. **State Locality**: Keep state as local as possible to avoid unnecessary re-renders
+2. **Immutable Updates**: Always create new objects/arrays when updating state
+3. **Computed Values**: Use useMemo for expensive calculations
+4. **Error Boundaries**: Implement error boundaries to handle state errors gracefully
+5. **Type Safety**: Use TypeScript for better state management
+6. **Testing**: Write comprehensive tests for state logic
+7. **Performance**: Profile and optimize state updates for performance
+
+Edukai's state management provides a scalable, maintainable foundation for complex application state while maintaining excellent performance and developer experience.

@@ -5,11 +5,382 @@ description: "TODO: Complete course management documentation"
 
 # Course Management
 
-// TODO: Complete documentation for course management section
+Edukai provides comprehensive course management functionality through the `useCourse` hook and related services, enabling users to create, organize, and manage educational content effectively.
 
-This section will cover:
+## 🎯 Overview
 
-- Course structure and organization
-- Content management workflows
+The course management system handles:
+- Course creation and metadata
+- Quiz and exam association
+- File and content organization
 - Progress tracking and analytics
-- Course administration features
+
+## 🏗️ Architecture
+
+### Core Hook: useCourse
+
+```typescript
+// hooks/useCourse.ts (5.5KB implementation)
+export function useCourse(courseService: CourseService) {
+  const [courseId, setCourseId] = useState("")
+  const [courseData, setCourseData] = useState<CourseData | null>(null)
+  const [coursesData, setCoursesData] = useState<CourseData[]>([])
+  const [examsData, setExamsData] = useState<ExamsDataArray | []>([])
+  const [isCreating, setIsLoading] = useState(false)
+  const [courseError, setError] = useState<string | null>(null)
+
+  // ... methods
+}
+```
+
+### Course Data Structure
+
+```typescript
+interface CourseData {
+  title: string;
+  subject: string;
+  level: string;
+  quizzes: string[];
+  exams: string[];
+  resumeFiles: [];
+}
+
+interface ExamData {
+  id: string;
+  title: string;
+  description: string;
+  date: Date;
+}
+```
+
+## 📚 Course Operations
+
+### Creating Courses
+
+```typescript
+async function createCourse(formFields: GeneratorForm) {
+  const { title, subject, level } = formFields;
+
+  try {
+    setIsLoading(true);
+    const course = await courseService.createCourse(title, subject, level);
+    const newCourseId = course.id;
+    setCourseId(newCourseId);
+    courseToast.createSuccess();
+    return newCourseId;
+  } catch (error) {
+    console.error("Error creating course:", error);
+    courseToast.createError();
+    setError("Failed to create course. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+}
+```
+
+### Loading Courses
+
+```typescript
+// Load single course
+const loadCourse = async (courseId: string) => {
+  try {
+    const response = await courseService.getCourseById(courseId);
+    setCourseData(response.item);
+    // Also load associated exams
+    await getExams(response.item.exams);
+  } catch (error) {
+    console.error(`Error loading course ${courseId}:`, error);
+    courseToast.loadError();
+    setError("Failed to load course. Please try again.");
+    return null;
+  }
+};
+
+// Load all courses
+const loadAllCourses = async () => {
+  try {
+    const response = await courseService.getCourses();
+    setCoursesData(response.items);
+    return response.items;
+  } catch (error) {
+    console.error("Error getting all courses: ", error);
+    setError("Failed to load courses. Please try again.");
+    return null;
+  }
+};
+```
+
+## 🔗 Content Association
+
+### Quiz Integration
+
+```typescript
+const addQuizToCourse = async (courseId: string, quizId: string) => {
+  try {
+    await courseService.addQuizToCourse(courseId, quizId);
+  } catch (error) {
+    console.error(`Error adding quiz ${quizId} to course ${courseId}`, error);
+    setError("Failed to associate quiz to course. Please try again.");
+    return null;
+  }
+};
+```
+
+### Summary Sheets
+
+```typescript
+const addSheetToCourse = async (courseId: string, sheetId: string) => {
+  try {
+    await courseService.addSheetToCourse(courseId, sheetId);
+  } catch (error) {
+    console.error(`Error adding summary sheet ${sheetId} to course ${courseId}`, error);
+    setError('Failed to associate summary sheet to course. Please try again.');
+    return null;
+  }
+};
+```
+
+## 📝 Exam Management
+
+### Creating Exams
+
+```typescript
+const createExam = async (
+  courseId: string,
+  title: string,
+  description: string,
+  date: Date
+): Promise<{ message: string } | null> => {
+  try {
+    const response = await courseService.createExam(
+      courseId,
+      title,
+      description,
+      date
+    );
+    examToast.createSuccess();
+    return response?.message ? { message: response.message } : null;
+  } catch (error) {
+    console.error("Error creating exam:", error);
+    examToast.createError();
+    setError(`Failed to create exam for course ${courseId}. Please try again.`);
+    return null;
+  }
+};
+```
+
+### Exam Operations
+
+```typescript
+// Get course exams (sorted by date)
+const getExams = async (courseExamsIds: string[]) => {
+  try {
+    const response = await Promise.all(
+      courseExamsIds.map(async (examId) => {
+        const exam = await courseService.getExamById(examId);
+        return exam.item;
+      })
+    );
+
+    const examsData = response.sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+    setExamsData(examsData);
+    return examsData;
+  } catch (error) {
+    console.error("Error getting course exams: ", error);
+    setError(`Failed to get exams. Please try again.`);
+    return null;
+  }
+};
+
+// Update exam
+const updateExamById = async (
+  examId: string,
+  title: string,
+  description: string,
+  date: Date
+): Promise<{ message: string } | null> => {
+  try {
+    const response = await courseService.updateExamById(
+      examId,
+      title,
+      description,
+      date
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error updating exam with id ${examId}: `, error);
+    setError(`Failed to update exam. Please try again.`);
+    return null;
+  }
+};
+
+// Delete exam
+const deleteExamById = async (examId: string, courseId: string) => {
+  try {
+    const response = await courseService.deleteExamById(examId, courseId);
+    return response;
+  } catch (error) {
+    console.error(`Error deleting exam with id ${examId}: `, error);
+    setError(`Failed to delete exam. Please try again.`);
+    return null;
+  }
+};
+```
+
+## 🎨 UI Components
+
+### Course Creation Form
+
+```tsx
+function CourseCreationForm() {
+  const { createCourse, isCreating, courseError } = useCourse(courseService);
+
+  const handleSubmit = async (formData: GeneratorForm) => {
+    const courseId = await createCourse(formData);
+    if (courseId) {
+      router.push(`/library/${courseId}`);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Input
+        placeholder="Course Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        required
+      />
+      <Select value={subject} onValueChange={setSubject}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select Subject" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="math">Mathematics</SelectItem>
+          <SelectItem value="science">Science</SelectItem>
+          <SelectItem value="language">Language</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select value={level} onValueChange={setLevel}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select Level" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="beginner">Beginner</SelectItem>
+          <SelectItem value="intermediate">Intermediate</SelectItem>
+          <SelectItem value="advanced">Advanced</SelectItem>
+        </SelectContent>
+      </Select>
+      <Button type="submit" disabled={isCreating}>
+        {isCreating ? (
+          <>
+            <Spinner className="mr-2 h-4 w-4" />
+            Creating...
+          </>
+        ) : (
+          "Create Course"
+        )}
+      </Button>
+      {courseError && (
+        <Alert variant="destructive">
+          <AlertDescription>{courseError}</AlertDescription>
+        </Alert>
+      )}
+    </form>
+  );
+}
+```
+
+### Course Library View
+
+```tsx
+function CourseLibrary() {
+  const { coursesData, loadAllCourses } = useCourse(courseService);
+
+  useEffect(() => {
+    loadAllCourses();
+  }, []);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {coursesData.map((course) => (
+        <CourseCard key={course.id} course={course} />
+      ))}
+    </div>
+  );
+}
+
+function CourseCard({ course }: { course: CourseData }) {
+  return (
+    <Card className="p-6 hover:shadow-lg transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <h3 className="font-semibold text-lg">{course.title}</h3>
+        <Badge variant="secondary">{course.level}</Badge>
+      </div>
+      <p className="text-muted-foreground mb-4">{course.subject}</p>
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>{course.quizzes.length} Quizzes</span>
+        <span>{course.exams.length} Exams</span>
+      </div>
+      <Button 
+        className="w-full mt-4" 
+        onClick={() => router.push(`/library/${course.id}`)}
+      >
+        View Course
+      </Button>
+    </Card>
+  );
+}
+```
+
+## 📊 Course Navigation
+
+The course management integrates with the library section navigation:
+
+```tsx
+// library/[id]/sections/ structure
+const courseSections = [
+  { id: "overview", label: "Overview", icon: "📊" },
+  { id: "quiz", label: "Quizzes", icon: "❓" },
+  { id: "exams", label: "Exams", icon: "📝" },
+  { id: "resume-files", label: "Summary", icon: "📄" },
+  { id: "objectives", label: "Objectives", icon: "🎯" },
+  { id: "statistics", label: "Statistics", icon: "📈" },
+  { id: "similar-courses", label: "Similar", icon: "🔍" }
+];
+```
+
+## 🔧 Error Handling
+
+### Toast Notifications
+
+```typescript
+// lib/toast.ts integration
+export const courseToast = {
+  createSuccess: () => toast.success("Course created successfully!"),
+  createError: () => toast.error("Failed to create course"),
+  loadError: () => toast.error("Failed to load course"),
+};
+
+export const examToast = {
+  createSuccess: () => toast.success("Exam created successfully!"),
+  createError: () => toast.error("Failed to create exam"),
+};
+```
+
+### Error Boundaries
+
+Course management includes comprehensive error handling with user-friendly messages and retry mechanisms for failed operations.
+
+## 🎯 Best Practices
+
+1. **State Management**: Use the `useCourse` hook for consistent state management
+2. **Error Handling**: Always handle errors gracefully with toast notifications
+3. **Loading States**: Show loading indicators during async operations
+4. **Data Validation**: Validate course data before submission
+5. **Optimistic Updates**: Update UI immediately for better UX
+6. **Cache Management**: Efficiently manage course data caching
+
+The course management system provides a robust foundation for organizing educational content within the Edukai platform.

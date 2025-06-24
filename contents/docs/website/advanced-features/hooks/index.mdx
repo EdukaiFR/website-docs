@@ -5,11 +5,491 @@ description: "TODO: Complete hooks documentation"
 
 # Hooks
 
-// TODO: Complete documentation for hooks section
+Edukai uses custom React hooks to encapsulate business logic, manage state, and provide reusable functionality across the application.
 
-This section will cover:
+## 🎯 Overview
 
-- Custom React hooks development
-- Hook patterns and best practices
-- State management with hooks
-- Performance optimization techniques
+Custom hooks provide:
+- Reusable business logic
+- State management patterns
+- API integration
+- UI behavior encapsulation
+
+## 📚 Core Hooks
+
+### useSession Hook
+
+```typescript
+// hooks/useSession.ts (3.2KB implementation)
+export function useSession() {
+  const [session, setSession] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const login = async (credentials) => {
+    try {
+      const response = await authService.login(credentials)
+      setSession(response.user)
+      return response
+    } catch (error) {
+      setError(error.message)
+      throw error
+    }
+  }
+
+  const logout = async () => {
+    await authService.logout()
+    setSession(null)
+    router.push('/auth')
+  }
+
+  return {
+    session,
+    isLoading,
+    error,
+    login,
+    logout,
+    isAuthenticated: !!session
+  }
+}
+```
+
+### useCourse Hook
+
+```typescript
+// hooks/useCourse.ts (5.5KB implementation)
+export function useCourse(courseService: CourseService) {
+  const [courseId, setCourseId] = useState("")
+  const [courseData, setCourseData] = useState<CourseData | null>(null)
+  const [coursesData, setCoursesData] = useState<CourseData[]>([])
+  const [isCreating, setIsLoading] = useState(false)
+
+  const createCourse = async (formFields: GeneratorForm) => {
+    setIsLoading(true)
+    try {
+      const course = await courseService.createCourse(
+        formFields.title,
+        formFields.subject,
+        formFields.level
+      )
+      setCourseId(course.id)
+      courseToast.createSuccess()
+      return course.id
+    } catch (error) {
+      courseToast.createError()
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return {
+    courseId,
+    courseData,
+    coursesData,
+    isCreating,
+    createCourse,
+    loadCourse,
+    loadAllCourses,
+    addQuizToCourse,
+    addSheetToCourse
+  }
+}
+```
+
+### useQuiz Hook
+
+```typescript
+// hooks/useQuiz.ts (3.4KB implementation)
+export function useQuiz(quizService: QuizService, insightsService?: InsightsService) {
+  const [quizData, setQuizData] = useState<Quiz>([])
+  const [quizId, setQuizId] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [insightsData, setInsightsData] = useState<Insights>({
+    averageScore: 0,
+    insightsCount: 0,
+  })
+
+  const generateQuiz = async (recognizedTexts: string[]) => {
+    setIsGenerating(true)
+    try {
+      const quiz = await quizService.generateQuiz(recognizedTexts)
+      setQuizId(quiz._id)
+      return { success: true, newQuizId: quiz.id }
+    } catch (error) {
+      return { success: false, error: error.message }
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  return {
+    quizData,
+    quizId,
+    insightsData,
+    isGenerating,
+    generateQuiz,
+    loadQuiz,
+    getQuizInsights,
+    createInsight
+  }
+}
+```
+
+## 🔧 Utility Hooks
+
+### useGeneration Hook
+
+```typescript
+// hooks/use-generation.ts (3.9KB implementation)
+export function useGeneration() {
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [currentStep, setCurrentStep] = useState('')
+
+  const generateContent = async (type: 'quiz' | 'summary', data: any) => {
+    setIsGenerating(true)
+    setProgress(0)
+    
+    try {
+      setCurrentStep('Analyzing content...')
+      setProgress(25)
+      
+      setCurrentStep('Processing data...')
+      setProgress(50)
+      
+      setCurrentStep('Generating content...')
+      setProgress(75)
+      
+      const result = await generationService.generate(type, data)
+      
+      setCurrentStep('Complete!')
+      setProgress(100)
+      
+      return result
+    } catch (error) {
+      throw error
+    } finally {
+      setIsGenerating(false)
+      setProgress(0)
+      setCurrentStep('')
+    }
+  }
+
+  return {
+    isGenerating,
+    progress,
+    currentStep,
+    generateContent
+  }
+}
+```
+
+### useLinks Hook
+
+```typescript
+// hooks/use-links.ts (1.1KB implementation)
+export function useLinks() {
+  const pathname = usePathname()
+  
+  const navigation = [
+    { href: '/', label: 'Dashboard', icon: Home },
+    { href: '/library', label: 'Library', icon: BookOpen },
+    { href: '/generate', label: 'Generate', icon: Sparkles },
+    { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/support', label: 'Support', icon: HelpCircle }
+  ]
+
+  const isActive = (href: string) => {
+    return pathname === href || pathname.startsWith(href + '/')
+  }
+
+  const breadcrumbs = useMemo(() => {
+    const segments = pathname.split('/').filter(Boolean)
+    return segments.map((segment, index) => {
+      const href = '/' + segments.slice(0, index + 1).join('/')
+      const label = segment.charAt(0).toUpperCase() + segment.slice(1)
+      return { href, label }
+    })
+  }, [pathname])
+
+  return {
+    navigation,
+    isActive,
+    breadcrumbs,
+    currentPath: pathname
+  }
+}
+```
+
+### useBlob Hook
+
+```typescript
+// hooks/useBlob.ts (818B implementation)
+export function useBlob(blobService: BlobService) {
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+
+  const uploadFile = async (file: File): Promise<string> => {
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const url = await blobService.uploadFile(file, {
+        onProgress: (progress) => setUploadProgress(progress)
+      })
+      return url
+    } catch (error) {
+      console.error('Upload failed:', error)
+      throw error
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
+  }
+
+  return {
+    isUploading,
+    uploadProgress,
+    uploadFile
+  }
+}
+```
+
+## 📱 UI Hooks
+
+### useMobile Hook
+
+```typescript
+// hooks/use-mobile.tsx (565B implementation)
+export function useMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)")
+    const onChange = () => setIsMobile(window.innerWidth < 768)
+    
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < 768)
+    
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return isMobile
+}
+```
+
+### useSheet Hook
+
+```typescript
+// hooks/useSheet.ts (1.2KB implementation)
+export function useSheet() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [content, setContent] = useState<React.ReactNode>(null)
+  const [title, setTitle] = useState('')
+
+  const openSheet = (sheetContent: React.ReactNode, sheetTitle = '') => {
+    setContent(sheetContent)
+    setTitle(sheetTitle)
+    setIsOpen(true)
+  }
+
+  const closeSheet = () => {
+    setIsOpen(false)
+    setTimeout(() => {
+      setContent(null)
+      setTitle('')
+    }, 150) // Wait for animation
+  }
+
+  return {
+    isOpen,
+    content,
+    title,
+    openSheet,
+    closeSheet
+  }
+}
+```
+
+### useAuthGuard Hook
+
+```typescript
+// hooks/useAuthGuard.ts (888B implementation)
+export function useAuthGuard() {
+  const { session, isLoading } = useSession()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (!isLoading && !session) {
+      // Store intended destination
+      sessionStorage.setItem('redirectAfterLogin', pathname)
+      router.push('/auth')
+    }
+  }, [session, isLoading, pathname, router])
+
+  const redirectToIntended = () => {
+    const intended = sessionStorage.getItem('redirectAfterLogin')
+    sessionStorage.removeItem('redirectAfterLogin')
+    router.push(intended || '/')
+  }
+
+  return {
+    isAuthenticated: !!session,
+    isLoading,
+    redirectToIntended
+  }
+}
+```
+
+## 🎯 Custom Hook Patterns
+
+### Data Fetching Hook
+
+```typescript
+function useApiData<T>(url: string, options?: RequestInit) {
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(url, options)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        
+        if (!cancelled) {
+          setData(result)
+          setError(null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err as Error)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [url])
+
+  return { data, loading, error }
+}
+```
+
+### Local Storage Hook
+
+```typescript
+function useLocalStorage<T>(key: string, initialValue: T) {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    try {
+      const item = window.localStorage.getItem(key)
+      return item ? JSON.parse(item) : initialValue
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error)
+      return initialValue
+    }
+  })
+
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value
+      setStoredValue(valueToStore)
+      window.localStorage.setItem(key, JSON.stringify(valueToStore))
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error)
+    }
+  }
+
+  return [storedValue, setValue] as const
+}
+```
+
+### Debounce Hook
+
+```typescript
+function useDebounce<T>(value: T, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+```
+
+## 🔄 Hook Composition
+
+### Combined Hooks Example
+
+```typescript
+function useQuizWorkflow() {
+  const { generateQuiz } = useQuiz(quizService)
+  const { uploadFile } = useBlob(blobService)
+  const { addQuizToCourse } = useCourse(courseService)
+  
+  const [currentStep, setCurrentStep] = useState<'upload' | 'process' | 'generate' | 'complete'>('upload')
+
+  const processFilesAndGenerateQuiz = async (files: File[], courseId: string) => {
+    try {
+      setCurrentStep('upload')
+      const urls = await Promise.all(files.map(uploadFile))
+      
+      setCurrentStep('process')
+      const texts = await extractTextsFromUrls(urls)
+      
+      setCurrentStep('generate')
+      const result = await generateQuiz(texts)
+      
+      if (result.success && result.newQuizId) {
+        await addQuizToCourse(courseId, result.newQuizId)
+        setCurrentStep('complete')
+      }
+      
+      return result
+    } catch (error) {
+      throw error
+    }
+  }
+
+  return {
+    currentStep,
+    processFilesAndGenerateQuiz
+  }
+}
+```
+
+## 🎯 Best Practices
+
+1. **Single Responsibility**: Each hook should have a clear, focused purpose
+2. **Custom Hook Naming**: Always prefix with 'use' and use descriptive names
+3. **Error Handling**: Include comprehensive error handling in hooks
+4. **Cleanup**: Properly clean up side effects to prevent memory leaks
+5. **Type Safety**: Use TypeScript for better developer experience
+6. **Testing**: Write unit tests for complex hook logic
+7. **Composition**: Combine hooks to create powerful workflows
+
+Custom hooks provide the foundation for Edukai's reactive architecture, enabling clean separation of concerns and reusable business logic.

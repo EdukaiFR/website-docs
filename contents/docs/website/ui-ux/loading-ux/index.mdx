@@ -5,11 +5,438 @@ description: "TODO: Complete loading UX documentation"
 
 # Loading UX
 
-// TODO: Complete documentation for loading UX section
+Edukai implements comprehensive loading states to provide excellent user experience during asynchronous operations like quiz generation, file processing, and data fetching.
 
-This section will cover:
+## 🎯 Loading Principles
 
-- Loading states and indicators
-- Skeleton screens and placeholders
-- Progressive loading strategies
-- User experience during data loading
+### Progressive Disclosure
+- Show immediate feedback for user actions
+- Provide context about what's happening
+- Indicate progress when possible
+- Maintain user engagement during waits
+
+### Perceived Performance
+- Use skeleton screens for predictable layouts
+- Implement optimistic updates
+- Show partial content as it loads
+- Prioritize above-the-fold content
+
+## 💀 Skeleton Components
+
+### Basic Skeleton
+```tsx
+import { Skeleton } from "@/components/ui/skeleton"
+
+// Basic skeleton usage
+<Skeleton className="h-4 w-[250px]" />
+<Skeleton className="h-4 w-[200px]" />
+<Skeleton className="h-4 w-[150px]" />
+```
+
+### Component Implementation
+```tsx
+// components/ui/skeleton.tsx
+import { cn } from "@/lib/utils"
+
+function Skeleton({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("animate-pulse rounded-md bg-muted", className)}
+      {...props}
+    />
+  )
+}
+```
+
+### Content Skeletons
+
+#### Card Skeleton
+```tsx
+function CardSkeleton() {
+  return (
+    <div className="border rounded-lg p-6 space-y-4">
+      <Skeleton className="h-6 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-5/6" />
+      <div className="flex space-x-2">
+        <Skeleton className="h-8 w-20" />
+        <Skeleton className="h-8 w-16" />
+      </div>
+    </div>
+  )
+}
+```
+
+#### Table Skeleton
+```tsx
+function TableSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex space-x-4">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-1/6" />
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+## 📊 Progress Indicators
+
+### Linear Progress
+```tsx
+import { Progress } from "@/components/ui/progress"
+
+function FileUploadProgress({ progress }: { progress: number }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm">
+        <span>Uploading...</span>
+        <span>{progress}%</span>
+      </div>
+      <Progress value={progress} className="h-2" />
+    </div>
+  )
+}
+```
+
+### Component Implementation
+```tsx
+// components/ui/progress.tsx
+import { cn } from "@/lib/utils"
+
+interface ProgressProps {
+  value?: number
+  className?: string
+}
+
+const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
+  ({ className, value, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
+        className
+      )}
+      {...props}
+    >
+      <div
+        className="h-full w-full flex-1 bg-primary transition-all"
+        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      />
+    </div>
+  )
+)
+```
+
+### Circular Progress
+```tsx
+function CircularProgress({ value }: { value: number }) {
+  const circumference = 2 * Math.PI * 20;
+  const strokeDasharray = circumference;
+  const strokeDashoffset = circumference - (value / 100) * circumference;
+
+  return (
+    <div className="relative w-12 h-12">
+      <svg className="w-full h-full transform -rotate-90">
+        <circle
+          cx="24"
+          cy="24"
+          r="20"
+          stroke="hsl(var(--muted))"
+          strokeWidth="4"
+          fill="none"
+        />
+        <circle
+          cx="24"
+          cy="24"
+          r="20"
+          stroke="hsl(var(--primary))"
+          strokeWidth="4"
+          fill="none"
+          strokeDasharray={strokeDasharray}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-300"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+        {value}%
+      </div>
+    </div>
+  )
+}
+```
+
+## 🔄 Spinner Components
+
+### Basic Spinner
+```tsx
+function Spinner({ size = "default" }: { size?: "sm" | "default" | "lg" }) {
+  const sizeClasses = {
+    sm: "h-4 w-4",
+    default: "h-6 w-6",
+    lg: "h-8 w-8"
+  }
+
+  return (
+    <div
+      className={cn(
+        "animate-spin rounded-full border-2 border-muted border-t-primary",
+        sizeClasses[size]
+      )}
+    />
+  )
+}
+```
+
+### Button with Loading State
+```tsx
+function LoadingButton({ 
+  isLoading, 
+  children, 
+  ...props 
+}: ButtonProps & { isLoading?: boolean }) {
+  return (
+    <Button disabled={isLoading} {...props}>
+      {isLoading && <Spinner size="sm" className="mr-2" />}
+      {children}
+    </Button>
+  )
+}
+```
+
+## 🎮 Interactive Loading States
+
+### Quiz Generation Loading
+```tsx
+function QuizGenerationLoader() {
+  const [stage, setStage] = useState(0)
+  
+  const stages = [
+    "Analyzing content...",
+    "Generating questions...",
+    "Creating answers...",
+    "Finalizing quiz..."
+  ]
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStage(prev => (prev + 1) % stages.length)
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div className="text-center space-y-4">
+      <Spinner size="lg" />
+      <p className="text-muted-foreground">{stages[stage]}</p>
+      <Progress value={(stage + 1) * 25} />
+    </div>
+  )
+}
+```
+
+### File Processing States
+```tsx
+function FileProcessingStatus({ status }: { status: 'uploading' | 'processing' | 'complete' }) {
+  const statusConfig = {
+    uploading: { icon: "📤", text: "Uploading file...", color: "text-blue-500" },
+    processing: { icon: "⚡", text: "Processing with OCR...", color: "text-yellow-500" },
+    complete: { icon: "✅", text: "Processing complete!", color: "text-green-500" }
+  }
+
+  const config = statusConfig[status]
+
+  return (
+    <div className="flex items-center space-x-3">
+      <span className="text-2xl">{config.icon}</span>
+      <span className={cn("font-medium", config.color)}>
+        {config.text}
+      </span>
+      {status !== 'complete' && <Spinner size="sm" />}
+    </div>
+  )
+}
+```
+
+## ⏳ Loading Patterns
+
+### Lazy Loading with Suspense
+```tsx
+import { Suspense } from 'react'
+
+const LazyComponent = lazy(() => import('./HeavyComponent'))
+
+function App() {
+  return (
+    <Suspense fallback={<ComponentSkeleton />}>
+      <LazyComponent />
+    </Suspense>
+  )
+}
+```
+
+### Data Fetching Loading
+```tsx
+function CourseList() {
+  const { data: courses, isLoading, error } = useCourses()
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <CardSkeleton key={i} />
+        ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return <ErrorState />
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {courses.map(course => <CourseCard key={course.id} course={course} />)}
+    </div>
+  )
+}
+```
+
+### Optimistic Updates
+```tsx
+function useOptimisticCourse() {
+  const [courses, setCourses] = useState([])
+  const [optimisticCourses, setOptimisticCourses] = useState([])
+
+  const createCourse = async (courseData) => {
+    // Optimistic update
+    const tempCourse = { ...courseData, id: 'temp-' + Date.now(), isOptimistic: true }
+    setOptimisticCourses(prev => [...prev, tempCourse])
+
+    try {
+      const newCourse = await api.createCourse(courseData)
+      setCourses(prev => [...prev, newCourse])
+      setOptimisticCourses(prev => prev.filter(c => c.id !== tempCourse.id))
+    } catch (error) {
+      setOptimisticCourses(prev => prev.filter(c => c.id !== tempCourse.id))
+      throw error
+    }
+  }
+
+  return {
+    courses: [...courses, ...optimisticCourses],
+    createCourse
+  }
+}
+```
+
+## 🚨 Error States
+
+### Error Boundaries with Loading Fallbacks
+```tsx
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div className="text-center p-8 space-y-4">
+      <div className="text-4xl">⚠️</div>
+      <h2 className="text-lg font-semibold">Something went wrong</h2>
+      <p className="text-muted-foreground">{error.message}</p>
+      <Button onClick={resetErrorBoundary}>Try again</Button>
+    </div>
+  )
+}
+```
+
+### Retry Mechanisms
+```tsx
+function useRetryableRequest(requestFn, maxRetries = 3) {
+  const [state, setState] = useState({
+    data: null,
+    isLoading: false,
+    error: null,
+    retryCount: 0
+  })
+
+  const execute = async () => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }))
+    
+    try {
+      const data = await requestFn()
+      setState(prev => ({ ...prev, data, isLoading: false, retryCount: 0 }))
+    } catch (error) {
+      if (state.retryCount < maxRetries) {
+        setState(prev => ({ ...prev, retryCount: prev.retryCount + 1 }))
+        setTimeout(execute, 1000 * (state.retryCount + 1)) // Exponential backoff
+      } else {
+        setState(prev => ({ ...prev, error, isLoading: false }))
+      }
+    }
+  }
+
+  return { ...state, retry: execute }
+}
+```
+
+## 📱 Mobile Loading Considerations
+
+### Touch-Friendly Loading States
+- Larger tap targets for retry buttons
+- Clear visual feedback for touch interactions
+- Prevent accidental touches during loading
+
+### Network Awareness
+```tsx
+function NetworkAwareLoading() {
+  const connection = navigator.connection
+  const isSlowConnection = connection?.effectiveType === '2g' || connection?.effectiveType === '3g'
+
+  if (isSlowConnection) {
+    return (
+      <div className="text-center space-y-2">
+        <Spinner />
+        <p className="text-sm text-muted-foreground">
+          Slow connection detected. This may take a moment...
+        </p>
+      </div>
+    )
+  }
+
+  return <Spinner />
+}
+```
+
+## 🎨 Animation Guidelines
+
+### Timing Functions
+- `ease-out` for entrances
+- `ease-in` for exits
+- `ease-in-out` for transitions
+
+### Duration Standards
+- Micro-interactions: 100-200ms
+- Component transitions: 200-300ms
+- Page transitions: 300-500ms
+- Loading animations: 1000ms+ (continuous)
+
+### Reduced Motion
+```css
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin {
+    animation: none;
+  }
+  
+  .animate-pulse {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+```
+
+Always respect user preferences for reduced motion to ensure accessibility.

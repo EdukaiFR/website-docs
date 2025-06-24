@@ -5,11 +5,243 @@ description: "TODO: Complete design system documentation"
 
 # Design System
 
-// TODO: Complete documentation for design system section
+Edukai's design system is built on **Tailwind CSS** and **ShadCN/UI** components, providing a consistent and accessible user interface across the platform.
 
-This section will cover:
+## 🎨 Color Palette
 
-- Design tokens and theming
-- Component library organization
-- Design system governance
-- Implementation and maintenance
+### CSS Variables System
+
+Our design system uses CSS variables for consistent theming and dark mode support:
+
+```css
+:root {
+  --background: 220 20% 97%;
+  --foreground: 240 10% 3.9%;
+  --primary: 240 5.9% 10%;
+  --secondary: 240 4.8% 95.9%;
+  --accent: 240 4.8% 95.9%;
+  --muted: 240 4.8% 95.9%;
+  --destructive: 0 84.2% 60.2%;
+  --border: 240 5.9% 90%;
+  --ring: 240 5.9% 10%;
+}
+```
+
+### Color Tokens
+
+| Token | Light Mode | Dark Mode | Usage |
+|-------|------------|-----------|--------|
+| `background` | `220 20% 97%` | `240 5.9% 7.5%` | Main background |
+| `foreground` | `240 10% 3.9%` | `0 0% 98%` | Primary text |
+| `primary` | `240 5.9% 10%` | `0 0% 98%` | Primary actions |
+| `secondary` | `240 4.8% 95.9%` | `240 3.7% 15.9%` | Secondary elements |
+| `muted` | `240 4.8% 95.9%` | `240 3.7% 15.9%` | Subtle backgrounds |
+| `accent` | `240 4.8% 95.9%` | `240 3.7% 15.9%` | Accent elements |
+| `destructive` | `0 84.2% 60.2%` | `0 62.8% 30.6%` | Error states |
+
+### Sidebar Colors
+
+Special color tokens for sidebar components:
+
+```css
+--sidebar-background: 0 0% 98%;
+--sidebar-foreground: 240 5.3% 26.1%;
+--sidebar-primary: 240 5.9% 10%;
+--sidebar-accent: 240 4.8% 95.9%;
+--sidebar-border: 220 13% 91%;
+```
+
+## 📝 Typography
+
+### Font Families
+
+#### Satoshi (Primary)
+```css
+.satoshi-medium {
+  font-family: "Satoshi-Medium", sans-serif;
+  font-weight: 500;
+}
+
+.satoshi-bold {
+  font-family: "Satoshi-Bold", sans-serif;
+  font-weight: 700;
+}
+```
+
+#### Outfit (Secondary)
+```css
+.outfit-regular {
+  font-family: "Outfit", serif;
+  font-weight: 500;
+}
+
+.outfit-bold {
+  font-family: "Outfit", serif;
+  font-weight: 700;
+}
+
+.outfit-light {
+  font-family: "Outfit", serif;
+  font-weight: 300;
+}
+```
+
+### Typography Utilities
+
+- `.text-medium` - Satoshi Medium with primary color
+- `.text-medium-white` - Satoshi Medium in white
+- `.text-medium-black` - Satoshi Medium in dark gray
+- `.text-medium-muted` - Satoshi Medium with opacity
+- `.text-primary` - Custom primary color (#2d6bcf)
+
+## 🧩 Component Library
+
+### Core Components
+
+Our design system includes a comprehensive set of ShadCN/UI components:
+
+#### Layout Components
+- **Card** - Content containers
+- **Separator** - Visual dividers
+- **Sidebar** - Navigation panels
+- **Sheet** - Sliding panels
+
+#### Form Components
+- **Button** - Actions and interactions
+- **Input** - Text input fields
+- **Textarea** - Multi-line text input
+- **Select** - Dropdown selections
+- **Checkbox** - Boolean selections
+- **Form** - Form structure and validation
+
+#### Feedback Components
+- **Toast** - Notifications
+- **Tooltip** - Contextual information
+- **Badge** - Status indicators
+- **Progress** - Loading states
+- **Skeleton** - Loading placeholders
+
+#### Navigation Components
+- **Breadcrumb** - Navigation hierarchy
+- **Command** - Command palette
+- **Dropdown Menu** - Context menus
+
+#### Data Display
+- **Table** - Data presentation
+- **Avatar** - User representation
+- **Calendar** - Date selection
+
+## 🎯 Border Radius
+
+Consistent border radius system:
+
+```css
+--radius: 0.5rem;
+
+.rounded-lg: var(--radius)      /* 8px */
+.rounded-md: calc(var(--radius) - 2px)  /* 6px */
+.rounded-sm: calc(var(--radius) - 4px)  /* 4px */
+```
+
+## 🌙 Dark Mode
+
+Dark mode is implemented using Tailwind's class-based approach:
+
+```tsx
+<html className={theme === 'dark' ? 'dark' : ''}>
+```
+
+All color tokens automatically switch between light and dark variants.
+
+## 📦 Tailwind Configuration
+
+```typescript
+const config: Config = {
+  darkMode: ["class"],
+  theme: {
+    extend: {
+      fontFamily: {
+        satoshi: ["Satoshi-Regular", "sans-serif"],
+      },
+      colors: {
+        // CSS variable integration
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        // ... other color mappings
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+};
+```
+
+## 🎨 Usage Examples
+
+### Using Color Tokens
+```tsx
+// Background colors
+<div className="bg-background border-border">
+  <p className="text-foreground">Content</p>
+</div>
+
+// Interactive elements
+<button className="bg-primary text-primary-foreground hover:bg-primary/90">
+  Primary Action
+</button>
+```
+
+### Typography Classes
+```tsx
+<h1 className="satoshi-bold text-2xl text-foreground">
+  Main Heading
+</h1>
+
+<p className="text-medium-muted">
+  Subtle text content
+</p>
+```
+
+### Component Integration
+```tsx
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+
+<Card className="p-6">
+  <Button variant="default" size="lg">
+    Get Started
+  </Button>
+</Card>
+```
+
+## 🔧 Customization
+
+### Adding New Colors
+1. Define CSS variable in `globals.css`
+2. Add Tailwind color mapping in `tailwind.config.ts`
+3. Use in components with `text-custom` or `bg-custom`
+
+### Custom Components
+Follow ShadCN/UI patterns:
+- Use forwardRef for ref forwarding
+- Implement variant props with class-variance-authority
+- Support className prop for customization
+
+## 📱 Responsive Design
+
+The design system includes responsive utilities:
+- Mobile-first approach
+- Consistent breakpoints
+- Adaptive components (especially sidebar)
+
+## ♿ Accessibility
+
+- Semantic HTML structure
+- ARIA attributes in components
+- Keyboard navigation support
+- Color contrast compliance
+- Screen reader compatibility

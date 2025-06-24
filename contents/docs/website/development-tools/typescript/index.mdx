@@ -5,11 +5,542 @@ description: "TODO: Complete TypeScript documentation"
 
 # TypeScript
 
-// TODO: Complete documentation for TypeScript section
+Edukai is built with TypeScript to provide type safety, better developer experience, and maintainable code across the entire application.
 
-This section will cover:
+## 🎯 Overview
 
-- TypeScript configuration and setup
-- Type definitions and interfaces
-- Advanced TypeScript patterns
-- TypeScript best practices
+TypeScript features:
+- Strict type checking
+- Type inference and safety
+- Interface and type definitions
+- Generic programming patterns
+- Integration with Next.js and React
+
+## ⚙️ Configuration
+
+### TSConfig Setup
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+### Key Settings Explained
+
+- **`strict: true`**: Enables all strict type checking options
+- **`noEmit: true`**: TypeScript only for type checking, Next.js handles compilation
+- **`moduleResolution: "bundler"`**: Modern module resolution for bundlers
+- **`paths`**: Path mapping for cleaner imports (`@/` prefix)
+
+## 📝 Type Definitions
+
+### Core Types
+
+```typescript
+// lib/types/generator.ts
+export interface GeneratorForm {
+  title: string;
+  subject: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+}
+
+// Course types
+export interface Course {
+  id: string;
+  title: string;
+  subject: string;
+  level: string;
+  quizzes: string[];
+  exams: string[];
+  resumeFiles: any[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Quiz types
+export type Quiz = {
+  question: string;
+  choices: string[];
+  answer: string;
+  explanation: string;
+}[];
+
+// Insights types
+export interface Insights {
+  averageScore: number;
+  insightsCount: number;
+  insights?: Array<{
+    score: number;
+    createdAt: string;
+  }>;
+}
+```
+
+### Service Types
+
+```typescript
+// Service interface definitions
+export interface QuizService {
+  generateQuiz(recognizedTexts: string[]): Promise<{
+    id: string;
+    _id: string;
+    quiz: Quiz;
+  }>;
+  getQuizById(id: string): Promise<{
+    item: {
+      quiz: Quiz;
+      id: string;
+    };
+  }>;
+}
+
+export interface CourseService {
+  createCourse(title: string, subject: string, level: string): Promise<{
+    id: string;
+    message: string;
+  }>;
+  getCourseById(id: string): Promise<{ item: Course }>;
+  getCourses(): Promise<{ items: Course[] }>;
+  addQuizToCourse(courseId: string, quizId: string): Promise<void>;
+  addSheetToCourse(courseId: string, sheetId: string): Promise<void>;
+}
+
+export interface InsightsService {
+  getQuizInsights(quizId: string): Promise<Insights>;
+  createInsight(quizId: string, score: number): Promise<any>;
+}
+```
+
+### Component Props Types
+
+```typescript
+// Comprehensive prop type definitions
+export interface ButtonProps 
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+  asChild?: boolean;
+}
+
+export interface FormFieldProps<T> {
+  control: Control<T>;
+  name: keyof T;
+  render: ({ field }: { field: ControllerRenderProps<T> }) => React.ReactElement;
+}
+
+export interface DataTableProps<T> {
+  columns: ColumnDef<T>[];
+  data: T[];
+  loading?: boolean;
+  onRowSelect?: (row: T) => void;
+  pagination?: {
+    pageIndex: number;
+    pageSize: number;
+    total: number;
+  };
+}
+```
+
+## 🔧 Generic Programming
+
+### Generic Hooks
+
+```typescript
+// Generic data fetching hook
+function useApiData<T>(url: string): {
+  data: T | null;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => void;
+} {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result: T = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  }, [url]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+// Usage with specific types
+const { data: courses } = useApiData<Course[]>('/api/courses');
+const { data: quiz } = useApiData<Quiz>(`/api/quiz/${quizId}`);
+```
+
+### Generic Components
+
+```typescript
+// Generic form component
+interface FormProps<T extends Record<string, any>> {
+  schema: ZodSchema<T>;
+  defaultValues: T;
+  onSubmit: (data: T) => void | Promise<void>;
+  children: (methods: UseFormReturn<T>) => React.ReactNode;
+}
+
+function Form<T extends Record<string, any>>({
+  schema,
+  defaultValues,
+  onSubmit,
+  children
+}: FormProps<T>) {
+  const methods = useForm<T>({
+    resolver: zodResolver(schema),
+    defaultValues
+  });
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={methods.handleSubmit(onSubmit)}>
+        {children(methods)}
+      </form>
+    </FormProvider>
+  );
+}
+
+// Usage
+<Form
+  schema={courseSchema}
+  defaultValues={{ title: '', subject: '', level: 'beginner' }}
+  onSubmit={handleSubmit}
+>
+  {({ control, formState }) => (
+    <>
+      <FormField control={control} name="title" />
+      <Button type="submit" disabled={formState.isSubmitting}>
+        Submit
+      </Button>
+    </>
+  )}
+</Form>
+```
+
+## 🛡️ Type Safety Patterns
+
+### Discriminated Unions
+
+```typescript
+// State management with discriminated unions
+type LoadingState = 
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: any }
+  | { status: 'error'; error: string };
+
+function useAsyncOperation() {
+  const [state, setState] = useState<LoadingState>({ status: 'idle' });
+
+  const execute = async (operation: () => Promise<any>) => {
+    setState({ status: 'loading' });
+    
+    try {
+      const data = await operation();
+      setState({ status: 'success', data });
+    } catch (error) {
+      setState({ 
+        status: 'error', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  };
+
+  return { state, execute };
+}
+
+// Type-safe state handling
+function MyComponent() {
+  const { state, execute } = useAsyncOperation();
+
+  switch (state.status) {
+    case 'idle':
+      return <Button onClick={() => execute(fetchData)}>Start</Button>;
+    case 'loading':
+      return <Spinner />;
+    case 'success':
+      return <div>Data: {state.data}</div>; // TypeScript knows `data` exists
+    case 'error':
+      return <div>Error: {state.error}</div>; // TypeScript knows `error` exists
+  }
+}
+```
+
+### Branded Types
+
+```typescript
+// Create branded types for better type safety
+type CourseId = string & { readonly brand: unique symbol };
+type QuizId = string & { readonly brand: unique symbol };
+type UserId = string & { readonly brand: unique symbol };
+
+function createCourseId(id: string): CourseId {
+  return id as CourseId;
+}
+
+function createQuizId(id: string): QuizId {
+  return id as QuizId;
+}
+
+// Functions that only accept specific ID types
+function getCourse(id: CourseId): Promise<Course> {
+  return fetch(`/api/courses/${id}`).then(r => r.json());
+}
+
+function getQuiz(id: QuizId): Promise<Quiz> {
+  return fetch(`/api/quiz/${id}`).then(r => r.json());
+}
+
+// Usage - prevents mixing up different ID types
+const courseId = createCourseId('course-123');
+const quizId = createQuizId('quiz-456');
+
+getCourse(courseId); // ✅ Correct
+getCourse(quizId);   // ❌ TypeScript error
+```
+
+## 🔍 Utility Types
+
+### Custom Utility Types
+
+```typescript
+// Create utility types for common patterns
+type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+// Example usage
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  bio?: string;
+}
+
+// Create user with required name and email, optional bio
+type CreateUserData = Optional<User, 'id'> & RequiredFields<User, 'name' | 'email'>;
+
+// API response wrapper
+type ApiResponse<T> = {
+  data: T;
+  message: string;
+  success: boolean;
+};
+
+type PaginatedResponse<T> = ApiResponse<T[]> & {
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+};
+```
+
+### Type Guards
+
+```typescript
+// Type guards for runtime type checking
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isCourse(value: unknown): value is Course {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'title' in value &&
+    'subject' in value &&
+    'level' in value
+  );
+}
+
+function isApiError(error: unknown): error is { message: string; code: number } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    'code' in error
+  );
+}
+
+// Usage in error handling
+try {
+  const result = await api.createCourse(data);
+} catch (error) {
+  if (isApiError(error)) {
+    console.error(`API Error ${error.code}: ${error.message}`);
+  } else {
+    console.error('Unknown error:', error);
+  }
+}
+```
+
+## 🎨 Component Type Patterns
+
+### Polymorphic Components
+
+```typescript
+// Create polymorphic components with proper typing
+type AsProp<C extends React.ElementType> = {
+  as?: C;
+};
+
+type PropsToOmit<C extends React.ElementType, P> = keyof (AsProp<C> & P);
+
+type PolymorphicComponentProp<
+  C extends React.ElementType,
+  Props = {}
+> = React.PropsWithChildren<Props & AsProp<C>> &
+  Omit<React.ComponentPropsWithoutRef<C>, PropsToOmit<C, Props>>;
+
+interface TextProps {
+  color?: 'primary' | 'secondary' | 'muted';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+function Text<C extends React.ElementType = 'span'>({
+  as,
+  color = 'primary',
+  size = 'md',
+  children,
+  className,
+  ...props
+}: PolymorphicComponentProp<C, TextProps>) {
+  const Component = as || 'span';
+  
+  return (
+    <Component
+      className={cn(
+        'text-base',
+        {
+          'text-primary': color === 'primary',
+          'text-secondary': color === 'secondary',
+          'text-muted-foreground': color === 'muted',
+          'text-sm': size === 'sm',
+          'text-base': size === 'md',
+          'text-lg': size === 'lg',
+        },
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </Component>
+  );
+}
+
+// Usage - component adapts to the 'as' prop
+<Text>Default span</Text>
+<Text as="h1">Heading</Text>
+<Text as="p" color="muted">Paragraph</Text>
+<Text as={Link} href="/courses">Link</Text>
+```
+
+### Forward Ref with Generic Types
+
+```typescript
+// Properly typed forwardRef components
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: string;
+  label?: string;
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, error, label, ...props }, ref) => {
+    return (
+      <div className="space-y-2">
+        {label && <label className="text-sm font-medium">{label}</label>}
+        <input
+          type={type}
+          className={cn(
+            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2",
+            error && "border-destructive",
+            className
+          )}
+          ref={ref}
+          {...props}
+        />
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+    );
+  }
+);
+
+Input.displayName = "Input";
+```
+
+## 🧪 Testing Types
+
+### Type Testing with TypeScript
+
+```typescript
+// Test types at compile time
+type Expect<T extends true> = T;
+type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
+  ? true
+  : false;
+
+// Test utility types
+type TestOptional = Optional<User, 'id'>;
+type _TestOptional = Expect<Equal<TestOptional, Omit<User, 'id'> & Partial<Pick<User, 'id'>>>>;
+
+// Test component props
+type TestButtonProps = React.ComponentProps<typeof Button>;
+type _TestButtonVariant = Expect<Equal<
+  TestButtonProps['variant'],
+  'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | undefined
+>>;
+```
+
+## 🎯 Best Practices
+
+1. **Strict Configuration**: Use strict TypeScript settings for maximum type safety
+2. **Type-First Design**: Define types before implementing components/functions
+3. **Generic Constraints**: Use generic constraints to limit type parameters
+4. **Discriminated Unions**: Prefer discriminated unions over loose object types
+5. **Type Guards**: Implement type guards for runtime type checking
+6. **Branded Types**: Use branded types to prevent mixing similar primitive types
+7. **Utility Types**: Leverage TypeScript's built-in and custom utility types
+8. **Component Typing**: Properly type React components with forwardRef and polymorphism
+
+TypeScript provides the foundation for Edukai's type-safe, maintainable, and robust codebase.

@@ -5,9 +5,9 @@ description: "Overview of the Edukai frontend project structure and organization
 
 # Project Structure
 
-This page provides an overview of how the Edukai frontend project is organized.
+Understanding Edukai's project structure is essential for efficient development and maintenance. The project follows Next.js 13+ App Router conventions with a well-organized component hierarchy.
 
-## Directory Overview
+## 🏗️ Directory Overview
 
 ```
 📁 Edukai Frontend
@@ -24,3 +24,308 @@ For detailed information about the architecture and implementation, see:
 
 - **[Project Structure Details](../../project-structure/overview)** - Complete project organization
 - **[Architecture Overview](../../project-structure/architecture)** - High-level architecture patterns
+
+## 📱 App Directory Structure
+
+### Route Groups
+
+```
+app/
+├── (auth)/               # Authentication flow
+│   ├── auth/
+│   │   └── page.tsx     # /auth - Login page
+│   ├── auth-demo/
+│   │   └── page.tsx     # /auth-demo - Demo login
+│   └── change-password/
+│       └── page.tsx     # /change-password
+└── (dashboard)/          # Main application
+    ├── page.tsx         # / - Dashboard home
+    ├── layout.tsx       # Dashboard layout with sidebar
+    ├── generate/
+    │   └── page.tsx     # /generate - Quiz generation
+    ├── library/
+    │   ├── page.tsx     # /library - Course library
+    │   └── [id]/
+    │       ├── page.tsx # /library/[id] - Course details
+    │       └── sections/
+    │           ├── exams/
+    │           ├── objectives/
+    │           ├── overview/
+    │           ├── quiz/
+    │           ├── resume-files/
+    │           ├── similar-courses/
+    │           └── statistics/
+    ├── notifications/
+    ├── settings/
+    └── support/
+```
+
+### Layout Hierarchy
+
+```typescript
+// app/layout.tsx - Root layout
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}
+
+// app/(dashboard)/layout.tsx - Dashboard layout
+export default function DashboardLayout({ children }) {
+  return (
+    <div className="flex h-screen">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
+    </div>
+  )
+}
+```
+
+## 🧩 Components Architecture
+
+### UI Components (ShadCN/UI)
+
+```
+components/ui/
+├── button.tsx            # Button component
+├── card.tsx              # Card layouts
+├── form.tsx              # Form components
+├── input.tsx             # Input fields
+├── dialog.tsx            # Modal dialogs
+├── dropdown-menu.tsx     # Dropdown menus
+├── table.tsx             # Data tables
+├── toast.tsx             # Notifications
+├── sidebar.tsx           # Navigation sidebar
+└── ...                   # Other UI primitives
+```
+
+### Feature Components
+
+```
+components/
+├── auth/
+│   ├── LoginForm.tsx
+│   ├── SignupForm.tsx
+│   └── AuthGuard.tsx
+├── generator/
+│   ├── FileUpload.tsx
+│   ├── QuizGenerator.tsx
+│   └── GenerationProgress.tsx
+├── recognition/
+│   └── textRecognizer.tsx
+├── data-table/
+│   ├── Footer/
+│   ├── Header/
+│   └── Tabs/
+└── card/
+    ├── CourseCard.tsx
+    └── QuizCard.tsx
+```
+
+## 🔧 Hooks Directory
+
+Custom hooks for business logic and state management:
+
+```
+hooks/
+├── index.ts              # Hook exports
+├── useSession.ts         # Authentication state
+├── useCourse.ts          # Course management
+├── useQuiz.ts            # Quiz functionality
+├── use-generation.ts     # Content generation
+├── use-links.ts          # Navigation helpers
+├── useBlob.ts            # File upload
+├── useSheet.ts           # Sheet/modal state
+├── useAuthGuard.ts       # Route protection
+└── use-mobile.tsx        # Mobile detection
+```
+
+## 📚 Lib Directory
+
+Utilities, configurations, and shared logic:
+
+```
+lib/
+├── actions/              # Server actions
+│   ├── auth.ts
+│   ├── courses.ts
+│   └── quiz.ts
+├── schemas/              # Zod validation
+│   ├── auth.ts
+│   ├── course.ts
+│   └── generator.ts
+├── types/                # TypeScript types
+│   ├── generator.ts
+│   └── index.ts
+├── utils.ts              # Utility functions
+├── auth.ts               # Authentication config
+├── session.ts            # Session management
+├── toast.ts              # Toast notifications
+└── date-format.ts        # Date utilities
+```
+
+### Key Utilities
+
+```typescript
+// lib/utils.ts
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// lib/toast.ts
+export const courseToast = {
+  createSuccess: () => toast.success("Course created successfully!"),
+  createError: () => toast.error("Failed to create course"),
+  loadError: () => toast.error("Failed to load course"),
+}
+```
+
+## 🌐 Services Layer
+
+API abstraction and service classes:
+
+```
+services/
+├── index.ts              # Service exports
+├── ai/
+│   ├── quiz.ts          # Quiz generation API
+│   └── summarySheet.ts  # Summary generation
+├── course.ts             # Course management API
+├── insights.ts           # Analytics API
+└── blob.ts               # File storage API
+```
+
+### Service Pattern
+
+```typescript
+// services/course.ts
+export class CourseService {
+  async createCourse(title: string, subject: string, level: string) {
+    const response = await fetch('/api/courses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, subject, level })
+    })
+    return response.json()
+  }
+
+  async getCourseById(id: string) {
+    const response = await fetch(`/api/courses/${id}`)
+    return response.json()
+  }
+}
+```
+
+## 📝 Configuration Files
+
+### TypeScript Configuration
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": ["./*"]    // Path mapping for imports
+    }
+  }
+}
+```
+
+### Tailwind Configuration
+
+```typescript
+// tailwind.config.ts
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        satoshi: ["Satoshi-Regular", "sans-serif"],
+      },
+      // ... theme extensions
+    },
+  },
+}
+```
+
+## 📊 Static Assets
+
+```
+public/
+├── fonts/                # Custom fonts
+│   ├── Satoshi-Regular.woff2
+│   └── ...
+├── mocks/                # Mock data for development
+├── preview/              # Preview images
+├── temp/                 # Temporary files
+└── favicon.ico           # Site favicon
+```
+
+## 📖 Documentation
+
+```
+docs/
+└── ideas/                # Development ideas and notes
+```
+
+## 🎯 Import Patterns
+
+### Absolute Imports
+
+```typescript
+// Use @ prefix for clean imports
+import { Button } from '@/components/ui/button'
+import { useCourse } from '@/hooks/useCourse'
+import { CourseService } from '@/services/course'
+import { courseSchema } from '@/lib/schemas/course'
+```
+
+### Component Exports
+
+```typescript
+// components/ui/index.ts
+export { Button } from './button'
+export { Card, CardContent, CardHeader } from './card'
+export { Input } from './input'
+export { Form, FormField, FormItem } from './form'
+
+// Usage
+import { Button, Card, Input } from '@/components/ui'
+```
+
+## 🔒 Environment Files
+
+```
+.env.local              # Local development
+.env.example            # Environment template
+.gitignore              # Git ignore patterns
+```
+
+## 🎯 Best Practices
+
+1. **File Naming**: Use kebab-case for files, PascalCase for components
+2. **Directory Organization**: Group by feature, then by type
+3. **Import Paths**: Use absolute imports with @ prefix
+4. **Component Structure**: Keep components focused and reusable
+5. **Type Safety**: Define types in dedicated files
+6. **Service Layer**: Abstract API calls into service classes
+7. **Hook Organization**: Create custom hooks for business logic
+8. **Configuration**: Centralize configuration in lib directory
+
+This structure provides a scalable, maintainable foundation for the Edukai platform while following Next.js and React best practices.

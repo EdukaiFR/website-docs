@@ -5,11 +5,421 @@ description: "TODO: Complete navigation documentation"
 
 # Navigation
 
-// TODO: Complete documentation for navigation section
+Edukai implements a comprehensive navigation system with a responsive sidebar, breadcrumbs, and contextual navigation patterns to provide intuitive user experience across the platform.
 
-This section will cover:
+## 🗂️ Navigation Architecture
 
-- Navigation patterns and components
-- Routing and page structure
-- Menu systems and breadcrumbs
-- Mobile navigation considerations
+### Route Structure
+The navigation follows Next.js App Router patterns with grouped routes:
+
+```
+app/
+├── (auth)/          # Authentication routes
+│   ├── auth/
+│   ├── auth-demo/
+│   └── change-password/
+└── (dashboard)/     # Main application routes
+    ├── club-edukai/
+    ├── generate/
+    ├── library/
+    ├── notifications/
+    ├── settings/
+    └── support/
+```
+
+### Navigation State Management
+Navigation state is managed through context and local state:
+
+```typescript
+// Navigation location tracking
+interface NavigationState {
+  currentPath: string;
+  breadcrumbs: BreadcrumbItem[];
+  activeSection: string;
+}
+```
+
+## 🎯 Sidebar Navigation
+
+### Sidebar Component Structure
+The main sidebar is implemented as a complex, responsive component:
+
+```tsx
+// components/ui/sidebar.tsx (23KB implementation)
+import { SidebarProvider, Sidebar, SidebarContent } from "@/components/ui/sidebar"
+
+function AppSidebar() {
+  return (
+    <Sidebar>
+      <SidebarContent>
+        {/* Navigation items */}
+      </SidebarContent>
+    </Sidebar>
+  )
+}
+```
+
+### Responsive Behavior
+- **Desktop**: Fixed sidebar with full navigation
+- **Tablet**: Collapsible sidebar
+- **Mobile**: Overlay sidebar with backdrop
+
+### Sidebar Features
+- **Collapsible sections**: Group related navigation items
+- **Active state indicators**: Visual feedback for current page
+- **Search integration**: Quick navigation to specific pages
+- **User context**: Different navigation based on user role
+
+### Sidebar Color System
+```css
+--sidebar-background: 0 0% 98%;
+--sidebar-foreground: 240 5.3% 26.1%;
+--sidebar-primary: 240 5.9% 10%;
+--sidebar-accent: 240 4.8% 95.9%;
+--sidebar-border: 220 13% 91%;
+```
+
+## 🍞 Breadcrumb Navigation
+
+### Implementation
+```tsx
+// components/ui/breadcrumb.tsx
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+
+function PageBreadcrumb({ items }: { items: BreadcrumbItem[] }) {
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {items.map((item, index) => (
+          <React.Fragment key={item.href}>
+            <BreadcrumbItem>
+              {index === items.length - 1 ? (
+                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink href={item.href}>
+                  {item.label}
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+            {index < items.length - 1 && <BreadcrumbSeparator />}
+          </React.Fragment>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
+}
+```
+
+### Breadcrumb Patterns
+```tsx
+// Library course breadcrumbs
+const libraryBreadcrumbs = [
+  { href: "/", label: "Dashboard" },
+  { href: "/library", label: "Library" },
+  { href: `/library/${courseId}`, label: course.title },
+  { href: `/library/${courseId}/sections`, label: "Overview" }
+]
+
+// Settings breadcrumbs
+const settingsBreadcrumbs = [
+  { href: "/", label: "Dashboard" },
+  { href: "/settings", label: "Settings" },
+  { href: "/settings/profile", label: "Profile" }
+]
+```
+
+## 🧭 Navigation Location Component
+
+### Location Tracking
+```tsx
+// components/navigation-location.tsx (11KB implementation)
+import { usePathname } from 'next/navigation'
+
+function NavigationLocation() {
+  const pathname = usePathname()
+  
+  // Complex logic for determining current location
+  // and generating appropriate breadcrumbs
+  
+  return (
+    <div className="flex items-center space-x-2">
+      <LocationIndicator />
+      <PageBreadcrumb items={breadcrumbs} />
+    </div>
+  )
+}
+```
+
+### Context-Aware Navigation
+- **Dashboard**: Overview and quick actions
+- **Library**: Course-specific navigation with sections
+- **Generate**: Step-by-step workflow navigation
+- **Settings**: Categorized configuration sections
+
+## 📱 Mobile Navigation
+
+### Mobile Patterns
+```tsx
+function MobileNavigation() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden"
+        onClick={() => setIsOpen(true)}
+      >
+        <Menu className="h-6 w-6" />
+      </Button>
+      
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetContent side="left" className="w-80">
+          <MobileSidebar />
+        </SheetContent>
+      </Sheet>
+    </>
+  )
+}
+```
+
+### Mobile Navigation Features
+- **Bottom navigation**: Quick access to main sections
+- **Swipe gestures**: Natural mobile interactions
+- **Tab bar**: Persistent navigation for primary actions
+- **Collapsible menus**: Hierarchical navigation in limited space
+
+## 🔗 Navigation Links
+
+### Link Utilities
+```tsx
+// lib/use-links.ts
+export function useLinks() {
+  return {
+    dashboard: "/",
+    library: "/library",
+    generate: "/generate",
+    settings: "/settings",
+    support: "/support",
+    notifications: "/notifications"
+  }
+}
+```
+
+### Active Link Detection
+```tsx
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const pathname = usePathname()
+  const isActive = pathname === href || pathname.startsWith(href + '/')
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+        isActive
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      )}
+    >
+      {children}
+    </Link>
+  )
+}
+```
+
+## 🎮 Interactive Navigation
+
+### Command Palette
+```tsx
+// Navigation search/command palette integration
+import { Command, CommandInput, CommandList, CommandItem } from "@/components/ui/command"
+
+function NavigationCommand() {
+  return (
+    <Command>
+      <CommandInput placeholder="Search pages..." />
+      <CommandList>
+        <CommandItem onSelect={() => router.push("/library")}>
+          📚 Go to Library
+        </CommandItem>
+        <CommandItem onSelect={() => router.push("/generate")}>
+          ✨ Generate Quiz
+        </CommandItem>
+        <CommandItem onSelect={() => router.push("/settings")}>
+          ⚙️ Settings
+        </CommandItem>
+      </CommandList>
+    </Command>
+  )
+}
+```
+
+### Keyboard Navigation
+- `Cmd/Ctrl + K`: Open command palette
+- `Tab`: Navigate through interactive elements
+- `Arrow keys`: Navigate menu items
+- `Enter/Space`: Activate navigation items
+- `Escape`: Close overlays/menus
+
+## 📋 Contextual Navigation
+
+### Course Library Navigation
+```tsx
+// library/[id]/sections/ navigation
+const courseSections = [
+  { id: "overview", label: "Overview", icon: "📊" },
+  { id: "quiz", label: "Quizzes", icon: "❓" },
+  { id: "exams", label: "Exams", icon: "📝" },
+  { id: "resume-files", label: "Summary", icon: "📄" },
+  { id: "objectives", label: "Objectives", icon: "🎯" },
+  { id: "statistics", label: "Statistics", icon: "📈" },
+  { id: "similar-courses", label: "Similar", icon: "🔍" }
+]
+
+function CourseSectionNav({ activeSection }: { activeSection: string }) {
+  return (
+    <nav className="flex space-x-1 border-b">
+      {courseSections.map((section) => (
+        <Link
+          key={section.id}
+          href={`/library/${courseId}/sections/${section.id}`}
+          className={cn(
+            "flex items-center px-3 py-2 text-sm font-medium border-b-2 transition-colors",
+            activeSection === section.id
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <span className="mr-2">{section.icon}</span>
+          {section.label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
+```
+
+### Step-by-Step Navigation
+```tsx
+// Generate workflow navigation
+function GenerateStepNav({ currentStep }: { currentStep: number }) {
+  const steps = [
+    { id: 1, label: "Upload", description: "Upload your files" },
+    { id: 2, label: "Process", description: "Extract content" },
+    { id: 3, label: "Generate", description: "Create quiz" },
+    { id: 4, label: "Review", description: "Review & edit" }
+  ]
+
+  return (
+    <nav className="flex justify-between">
+      {steps.map((step, index) => (
+        <div
+          key={step.id}
+          className={cn(
+            "flex flex-col items-center",
+            currentStep >= step.id ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center border-2 mb-2",
+            currentStep >= step.id
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-muted"
+          )}>
+            {step.id}
+          </div>
+          <span className="text-sm font-medium">{step.label}</span>
+          <span className="text-xs text-muted-foreground">{step.description}</span>
+        </div>
+      ))}
+    </nav>
+  )
+}
+```
+
+## 🎨 Navigation Styling
+
+### CSS Classes
+```css
+/* Navigation specific styles */
+.nav-item-active {
+  @apply bg-sidebar-accent text-sidebar-accent-foreground;
+}
+
+.nav-item-hover {
+  @apply hover:bg-sidebar-accent hover:text-sidebar-accent-foreground;
+}
+
+.nav-separator {
+  @apply border-sidebar-border;
+}
+```
+
+### Animation Patterns
+```css
+/* Smooth transitions for navigation */
+.nav-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Sidebar slide animations */
+.sidebar-enter {
+  transform: translateX(-100%);
+}
+
+.sidebar-enter-active {
+  transform: translateX(0);
+  transition: transform 0.3s ease-out;
+}
+```
+
+## ♿ Accessibility Features
+
+### Screen Reader Support
+- Semantic navigation landmarks
+- ARIA labels for icon-only buttons
+- Skip links for keyboard navigation
+- Focus management for overlays
+
+### Keyboard Navigation
+- Tab order optimization
+- Arrow key navigation for menus
+- Escape key handling
+- Focus trapping in modals
+
+### Visual Accessibility
+- High contrast mode support
+- Reduced motion preferences
+- Clear focus indicators
+- Consistent navigation patterns
+
+## 📊 Navigation Analytics
+
+### Usage Tracking
+```typescript
+// Track navigation patterns
+function trackNavigation(from: string, to: string) {
+  analytics.track('navigation', {
+    from_page: from,
+    to_page: to,
+    timestamp: new Date().toISOString()
+  })
+}
+```
+
+### Performance Optimization
+- Route prefetching for faster navigation
+- Lazy loading of navigation components
+- Virtualized navigation for large lists
+- Optimized re-renders with React.memo
+
+The navigation system provides a robust, accessible, and performant foundation for the Edukai platform, ensuring users can efficiently navigate through all features and content.

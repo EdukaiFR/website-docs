@@ -5,11 +5,450 @@ description: "TODO: Complete forms documentation"
 
 # Forms
 
-// TODO: Complete documentation for forms section
+Edukai implements comprehensive form handling with React Hook Form, Zod validation, and custom form components built on ShadCN/UI.
 
-This section will cover:
+## 🎯 Overview
 
-- Form handling and validation
-- Form components and patterns
-- State management for forms
-- Error handling and user feedback
+Form features include:
+- Type-safe validation with Zod schemas
+- React Hook Form integration
+- Custom form components
+- Form state management
+- Error handling and display
+
+## 🏗️ Architecture
+
+### Form Components
+
+```tsx
+// components/ui/form.tsx (4.1KB implementation)
+import { FormProvider, useFormContext } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+
+// Core form structure
+const Form = FormProvider
+
+const FormField = ({ control, name, render }) => (
+  <Controller
+    control={control}
+    name={name}
+    render={({ field, fieldState, formState }) => (
+      <FormItem>
+        {render({ field, fieldState, formState })}
+      </FormItem>
+    )}
+  />
+)
+```
+
+### Form Alert Component
+
+```tsx
+// components/ui/form-alert.tsx (3.6KB implementation)
+interface FormAlertProps {
+  type: 'error' | 'warning' | 'success' | 'info';
+  message: string;
+  className?: string;
+}
+
+function FormAlert({ type, message, className }: FormAlertProps) {
+  return (
+    <Alert variant={type === 'error' ? 'destructive' : 'default'} className={className}>
+      <AlertIcon type={type} />
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  )
+}
+```
+
+## 📝 Form Examples
+
+### Course Creation Form
+
+```tsx
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+
+const courseSchema = z.object({
+  title: z.string().min(1, "Title is required").max(100, "Title too long"),
+  subject: z.string().min(1, "Subject is required"),
+  level: z.enum(["beginner", "intermediate", "advanced"])
+})
+
+type CourseFormData = z.infer<typeof courseSchema>
+
+function CourseCreationForm() {
+  const form = useForm<CourseFormData>({
+    resolver: zodResolver(courseSchema),
+    defaultValues: {
+      title: "",
+      subject: "",
+      level: "beginner"
+    }
+  })
+
+  const onSubmit = async (data: CourseFormData) => {
+    try {
+      await createCourse(data)
+      toast.success("Course created successfully!")
+    } catch (error) {
+      toast.error("Failed to create course")
+    }
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Course Title</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter course title" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Subject</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a subject" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="math">Mathematics</SelectItem>
+                  <SelectItem value="science">Science</SelectItem>
+                  <SelectItem value="language">Language</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? (
+            <>
+              <Spinner className="mr-2 h-4 w-4" />
+              Creating...
+            </>
+          ) : (
+            "Create Course"
+          )}
+        </Button>
+      </form>
+    </Form>
+  )
+}
+```
+
+### Exam Creation Form
+
+```tsx
+const examSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  date: z.date().min(new Date(), "Date must be in the future")
+})
+
+function ExamForm({ courseId }: { courseId: string }) {
+  const form = useForm<z.infer<typeof examSchema>>({
+    resolver: zodResolver(examSchema)
+  })
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Exam Title</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Exam Date</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button variant="outline">
+                      {field.value ? (
+                        format(field.value, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) => date < new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit">Create Exam</Button>
+      </form>
+    </Form>
+  )
+}
+```
+
+## 🔍 Validation Patterns
+
+### Zod Schemas
+
+```typescript
+// lib/schemas/generator.ts
+export const generatorSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  subject: z.string().min(1, "Subject is required"),
+  level: z.enum(["beginner", "intermediate", "advanced"]),
+  files: z.array(z.instanceof(File)).min(1, "At least one file required")
+})
+
+// lib/schemas/user.ts
+export const userProfileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  bio: z.string().max(500, "Bio too long").optional(),
+  preferences: z.object({
+    theme: z.enum(["light", "dark", "system"]),
+    notifications: z.boolean()
+  })
+})
+```
+
+### Custom Validation
+
+```typescript
+// Custom validation for file uploads
+const fileValidation = z.custom<File>((file) => {
+  if (!(file instanceof File)) return false
+  if (file.size > 10 * 1024 * 1024) return false // 10MB limit
+  return ['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)
+}, {
+  message: "File must be JPG, PNG, or PDF under 10MB"
+})
+```
+
+## 🎨 Form Components
+
+### Input Components
+
+```tsx
+// Enhanced input with validation state
+function ValidatedInput({ 
+  error, 
+  success, 
+  ...props 
+}: InputProps & { error?: string; success?: boolean }) {
+  return (
+    <div className="space-y-1">
+      <Input
+        className={cn(
+          error && "border-destructive focus:border-destructive",
+          success && "border-green-500 focus:border-green-500"
+        )}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
+    </div>
+  )
+}
+
+// File input component
+function FileInput({ onChange, accept, multiple }: {
+  onChange: (files: FileList) => void
+  accept?: string
+  multiple?: boolean
+}) {
+  return (
+    <Input
+      type="file"
+      accept={accept}
+      multiple={multiple}
+      onChange={(e) => e.target.files && onChange(e.target.files)}
+      className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
+    />
+  )
+}
+```
+
+### Textarea Enhancement
+
+```tsx
+// Auto-resizing textarea
+function AutoResizeTextarea({ 
+  value, 
+  onChange, 
+  ...props 
+}: TextareaProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
+    }
+  }, [value])
+
+  return (
+    <Textarea
+      ref={textareaRef}
+      value={value}
+      onChange={onChange}
+      {...props}
+    />
+  )
+}
+```
+
+## 🔧 Form Utilities
+
+### Form State Management
+
+```typescript
+// Custom hook for form state
+function useFormState<T>() {
+  const [isDirty, setIsDirty] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const resetForm = () => {
+    setIsDirty(false)
+    setIsSubmitting(false)
+    setErrors({})
+  }
+
+  return {
+    isDirty,
+    setIsDirty,
+    isSubmitting,
+    setIsSubmitting,
+    errors,
+    setErrors,
+    resetForm
+  }
+}
+```
+
+### Form Persistence
+
+```typescript
+// Auto-save form data
+function useFormPersistence<T>(key: string, defaultValues: T) {
+  const [values, setValues] = useState<T>(() => {
+    const saved = localStorage.getItem(key)
+    return saved ? JSON.parse(saved) : defaultValues
+  })
+
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(values))
+  }, [key, values])
+
+  return [values, setValues] as const
+}
+```
+
+## 🚨 Error Handling
+
+### Form Error Display
+
+```tsx
+function FormErrorSummary({ errors }: { errors: Record<string, string> }) {
+  const errorEntries = Object.entries(errors)
+  
+  if (errorEntries.length === 0) return null
+
+  return (
+    <Alert variant="destructive" className="mb-4">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Please fix the following errors:</AlertTitle>
+      <AlertDescription>
+        <ul className="list-disc list-inside space-y-1">
+          {errorEntries.map(([field, message]) => (
+            <li key={field}>{message}</li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
+  )
+}
+```
+
+### Async Validation
+
+```typescript
+// Debounced async validation
+function useAsyncValidation(
+  value: string,
+  validator: (value: string) => Promise<boolean>,
+  delay = 500
+) {
+  const [isValidating, setIsValidating] = useState(false)
+  const [isValid, setIsValid] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (value) {
+        setIsValidating(true)
+        try {
+          const result = await validator(value)
+          setIsValid(result)
+        } catch {
+          setIsValid(false)
+        }
+        setIsValidating(false)
+      }
+    }, delay)
+
+    return () => clearTimeout(timer)
+  }, [value, validator, delay])
+
+  return { isValidating, isValid }
+}
+```
+
+## 🎯 Best Practices
+
+1. **Type Safety**: Use Zod for runtime validation and TypeScript inference
+2. **Accessibility**: Include proper labels, ARIA attributes, and keyboard navigation
+3. **User Experience**: Provide immediate feedback and clear error messages
+4. **Performance**: Debounce validation and optimize re-renders
+5. **Persistence**: Auto-save form data for better user experience
+6. **Testing**: Write comprehensive tests for form validation logic
+
+The form system provides a robust, type-safe foundation for all user input within the Edukai platform.

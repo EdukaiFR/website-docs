@@ -5,11 +5,476 @@ description: "TODO: Complete file processing documentation"
 
 # File Processing
 
-// TODO: Complete documentation for file processing section
+Edukai implements advanced file processing capabilities using OCR (Optical Character Recognition) with Tesseract.js to extract text from various file formats for quiz and content generation.
 
-This section will cover:
+## 🎯 Overview
 
-- File upload and handling
-- File processing workflows
-- File validation and security
-- Storage and retrieval patterns
+The file processing system handles:
+- Image and PDF file uploads
+- OCR text extraction using Tesseract.js
+- Text preprocessing and cleaning
+- Progress tracking and error handling
+
+## 🏗️ Architecture
+
+### Text Recognition Component
+
+```tsx
+// components/recognition/textRecognizer.tsx (2.0KB implementation)
+import Tesseract from 'tesseract.js';
+
+interface TextRecognizerProps {
+  file: File;
+  onTextExtracted: (text: string) => void;
+  onProgress?: (progress: number) => void;
+  onError?: (error: string) => void;
+}
+
+function TextRecognizer({ 
+  file, 
+  onTextExtracted, 
+  onProgress, 
+  onError 
+}: TextRecognizerProps) {
+  // OCR processing implementation
+}
+```
+
+### Supported File Types
+
+```typescript
+const SUPPORTED_FILE_TYPES = {
+  images: ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'],
+  documents: ['.pdf'],
+  maxSize: 10 * 1024 * 1024, // 10MB
+};
+
+const isValidFileType = (file: File): boolean => {
+  const extension = file.name.toLowerCase().split('.').pop();
+  return [
+    ...SUPPORTED_FILE_TYPES.images,
+    ...SUPPORTED_FILE_TYPES.documents
+  ].includes(`.${extension}`);
+};
+```
+
+## 📤 File Upload System
+
+### Upload Component
+
+```tsx
+function FileUploader({ onTextExtracted }: { onTextExtracted: (texts: string[]) => void }) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [extractedTexts, setExtractedTexts] = useState<string[]>([]);
+
+  const handleFileSelect = (selectedFiles: FileList) => {
+    const validFiles = Array.from(selectedFiles).filter(file => {
+      if (!isValidFileType(file)) {
+        toast.error(`${file.name} is not a supported file type`);
+        return false;
+      }
+      if (file.size > SUPPORTED_FILE_TYPES.maxSize) {
+        toast.error(`${file.name} is too large (max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
+    setFiles(prev => [...prev, ...validFiles]);
+  };
+
+  const processFiles = async () => {
+    setIsProcessing(true);
+    const texts: string[] = [];
+
+    for (const file of files) {
+      try {
+        const text = await extractTextFromFile(file, (progress) => {
+          setProgress(prev => ({ ...prev, [file.name]: progress }));
+        });
+        texts.push(text);
+      } catch (error) {
+        console.error(`Error processing ${file.name}:`, error);
+        toast.error(`Failed to process ${file.name}`);
+      }
+    }
+
+    setExtractedTexts(texts);
+    setIsProcessing(false);
+    onTextExtracted(texts);
+  };
+
+  return (
+    <div className="space-y-6">
+      <FileDropzone onFileSelect={handleFileSelect} />
+      {files.length > 0 && (
+        <FileList 
+          files={files} 
+          progress={progress}
+          onRemove={(index) => setFiles(prev => prev.filter((_, i) => i !== index))}
+        />
+      )}
+      {files.length > 0 && (
+        <Button 
+          onClick={processFiles} 
+          disabled={isProcessing}
+          className="w-full"
+        >
+          {isProcessing ? (
+            <>
+              <Spinner className="mr-2 h-4 w-4" />
+              Processing {files.length} file(s)...
+            </>
+          ) : (
+            `Process ${files.length} file(s)`
+          )}
+        </Button>
+      )}
+    </div>
+  );
+}
+```
+
+### Drag & Drop Interface
+
+```tsx
+function FileDropzone({ onFileSelect }: { onFileSelect: (files: FileList) => void }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      onFileSelect(files);
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      onFileSelect(files);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
+        isDragOver
+          ? "border-primary bg-primary/5"
+          : "border-muted-foreground/25 hover:border-muted-foreground/50"
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".jpg,.jpeg,.png,.bmp,.tiff,.webp,.pdf"
+        onChange={handleFileInput}
+        className="hidden"
+      />
+      
+      <div className="space-y-4">
+        <div className="text-4xl">📄</div>
+        <div>
+          <h3 className="font-medium mb-2">
+            Drag and drop files here, or click to select
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Supports images (JPG, PNG, etc.) and PDF files up to 10MB
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Select Files
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+## 🔍 OCR Text Extraction
+
+### Tesseract.js Integration
+
+```typescript
+async function extractTextFromFile(
+  file: File, 
+  onProgress?: (progress: number) => void
+): Promise<string> {
+  try {
+    // Convert file to appropriate format for OCR
+    const imageUrl = await fileToImageUrl(file);
+    
+    // Configure Tesseract with optimal settings
+    const worker = await Tesseract.createWorker();
+    
+    await worker.loadLanguage('eng+fra'); // Support multiple languages
+    await worker.initialize('eng+fra');
+    
+    // Set OCR parameters for better accuracy
+    await worker.setParameters({
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?;:()[]{}"-',
+      tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+    });
+
+    const { data } = await worker.recognize(imageUrl, {
+      logger: (info) => {
+        if (info.status === 'recognizing text' && onProgress) {
+          onProgress(info.progress * 100);
+        }
+      }
+    });
+
+    await worker.terminate();
+    
+    // Clean and preprocess extracted text
+    return cleanExtractedText(data.text);
+    
+  } catch (error) {
+    console.error('OCR extraction failed:', error);
+    throw new Error('Failed to extract text from file');
+  }
+}
+```
+
+### File Type Handling
+
+```typescript
+async function fileToImageUrl(file: File): Promise<string> {
+  if (file.type.startsWith('image/')) {
+    // Direct image file
+    return URL.createObjectURL(file);
+  } else if (file.type === 'application/pdf') {
+    // Convert PDF to image for OCR
+    return await convertPdfToImage(file);
+  } else {
+    throw new Error('Unsupported file type');
+  }
+}
+
+async function convertPdfToImage(pdfFile: File): Promise<string> {
+  // PDF to image conversion logic
+  // Using libraries like pdf-lib or PDF.js
+  const pdfArrayBuffer = await pdfFile.arrayBuffer();
+  
+  // Convert first page to image
+  const canvas = await renderPdfPageToCanvas(pdfArrayBuffer, 0);
+  return canvas.toDataURL();
+}
+```
+
+## 🧹 Text Preprocessing
+
+### Text Cleaning Functions
+
+```typescript
+function cleanExtractedText(rawText: string): string {
+  return rawText
+    // Remove excessive whitespace
+    .replace(/\s+/g, ' ')
+    // Remove special characters that interfere with processing
+    .replace(/[^\w\s.,!?;:()[\]{}"-]/g, '')
+    // Normalize line breaks
+    .replace(/\n+/g, '\n')
+    // Trim whitespace
+    .trim();
+}
+
+function preprocessTextForQuiz(texts: string[]): string[] {
+  return texts
+    .map(text => cleanExtractedText(text))
+    .filter(text => text.length > 50) // Filter out very short texts
+    .map(text => {
+      // Split into sentences and rejoin coherent paragraphs
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+      return sentences.join('. ') + '.';
+    });
+}
+```
+
+## 📊 Progress Tracking
+
+### File Processing Status
+
+```tsx
+function FileProcessingStatus({ files, progress }: { 
+  files: File[], 
+  progress: Record<string, number> 
+}) {
+  return (
+    <div className="space-y-4">
+      {files.map((file, index) => {
+        const fileProgress = progress[file.name] || 0;
+        const status = fileProgress === 100 ? 'complete' : 
+                      fileProgress > 0 ? 'processing' : 'pending';
+        
+        return (
+          <div key={index} className="border rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium">{file.name}</span>
+              <FileStatusIcon status={status} />
+            </div>
+            
+            <div className="space-y-2">
+              <Progress value={fileProgress} className="h-2" />
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>{formatFileSize(file.size)}</span>
+                <span>{Math.round(fileProgress)}%</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FileStatusIcon({ status }: { status: 'pending' | 'processing' | 'complete' }) {
+  switch (status) {
+    case 'pending':
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
+    case 'processing':
+      return <Spinner className="h-4 w-4 text-primary" />;
+    case 'complete':
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+  }
+}
+```
+
+## 🚨 Error Handling
+
+### Comprehensive Error Management
+
+```typescript
+class FileProcessingError extends Error {
+  constructor(
+    message: string,
+    public filename: string,
+    public errorType: 'upload' | 'ocr' | 'validation' | 'size' | 'format'
+  ) {
+    super(message);
+    this.name = 'FileProcessingError';
+  }
+}
+
+function handleFileProcessingError(error: FileProcessingError) {
+  const errorMessages = {
+    upload: 'Failed to upload file. Please try again.',
+    ocr: 'Failed to extract text from image. The image may be too blurry or contain unreadable text.',
+    validation: 'File validation failed. Please check the file format.',
+    size: 'File is too large. Maximum size is 10MB.',
+    format: 'Unsupported file format. Please use JPG, PNG, or PDF files.'
+  };
+
+  toast.error(`${errorMessages[error.errorType]} (${error.filename})`);
+  
+  // Log for debugging
+  console.error('File processing error:', {
+    filename: error.filename,
+    type: error.errorType,
+    message: error.message
+  });
+}
+```
+
+## 🔧 Optimization Strategies
+
+### Performance Optimization
+
+```typescript
+// Worker pool for parallel processing
+class OCRWorkerPool {
+  private workers: Tesseract.Worker[] = [];
+  private readonly maxWorkers = 3;
+
+  async getWorker(): Promise<Tesseract.Worker> {
+    if (this.workers.length < this.maxWorkers) {
+      const worker = await Tesseract.createWorker();
+      await worker.loadLanguage('eng+fra');
+      await worker.initialize('eng+fra');
+      this.workers.push(worker);
+      return worker;
+    }
+    
+    // Return least busy worker
+    return this.workers[0];
+  }
+
+  async processFiles(files: File[]): Promise<string[]> {
+    const results = await Promise.allSettled(
+      files.map(file => this.processFile(file))
+    );
+    
+    return results
+      .filter((result): result is PromiseFulfilledResult<string> => 
+        result.status === 'fulfilled'
+      )
+      .map(result => result.value);
+  }
+}
+```
+
+### Memory Management
+
+```typescript
+// Clean up object URLs to prevent memory leaks
+function cleanupFileUrls(urls: string[]) {
+  urls.forEach(url => {
+    if (url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  });
+}
+
+// Use in component cleanup
+useEffect(() => {
+  return () => {
+    cleanupFileUrls(processedUrls);
+  };
+}, []);
+```
+
+## 🧪 Testing & Validation
+
+### File Validation
+
+```typescript
+function validateFile(file: File): { isValid: boolean; error?: string } {
+  if (!isValidFileType(file)) {
+    return { isValid: false, error: 'Unsupported file type' };
+  }
+  
+  if (file.size > SUPPORTED_FILE_TYPES.maxSize) {
+    return { isValid: false, error: 'File too large' };
+  }
+  
+  if (file.size === 0) {
+    return { isValid: false, error: 'Empty file' };
+  }
+  
+  return { isValid: true };
+}
+```
+
+The file processing system provides robust, user-friendly file handling with advanced OCR capabilities for extracting educational content from various file formats.
